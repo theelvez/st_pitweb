@@ -50,5 +50,6 @@ def contact():
     return render_template('contact.html')
 
 if __name__ == '__main__':
-    db.create_all()  # Create the database table
+    with app.app_context():
+        db.create_all()  # Create the database table
     app.run(debug=True)
