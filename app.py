@@ -3,7 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///race_results.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=pitwebstorage;AccountKey=mr4ZIFYYqhct+TvyhAR/J0JBEzvoaNlFRBOMttoxLzOaQG2Bmyv1w/6YN/ui0V0NTC+B/OeMWzvs+AStPwOBEA==;BlobEndpoint=https://pitwebstorage.blob.core.windows.net/;FileEndpoint=https://pitwebstorage.file.core.windows.net/;QueueEndpoint=https://pitwebstorage.queue.core.windows.net/;TableEndpoint=https://pitwebstorage.table.core.windows.net/"
+
 db = SQLAlchemy(app)
 
 class RaceResult(db.Model):
