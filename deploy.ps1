@@ -3,7 +3,6 @@ $appName = "pitweb"  # Replace with your app name
 $resourceGroup = "pitwebResources"  # Replace with your resource group name
 $location = "westus"  # Replace with your location (e.g., westus)
 $planName = $appName + "ServicePlan"
-$runtime = "PYTHON|3.10"  # Replace with your Python version
 
 # Create a resource group
 az group create --name $resourceGroup --location $location
@@ -12,7 +11,7 @@ az group create --name $resourceGroup --location $location
 az appservice plan create --name $planName --resource-group $resourceGroup --sku B1 --is-linux
 
 # Create a web app
-az webapp create --name $appName --resource-group $resourceGroup --plan $planName --runtime $runtime
+az webapp create --name $appName --resource-group $resourceGroup --plan $planName --runtime "PYTHON|3.10"
 
 # Configure the web app to use local git for deployment
 az webapp deployment source config-local-git --name $appName --resource-group $resourceGroup
