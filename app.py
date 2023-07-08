@@ -9,7 +9,12 @@ BLOB_STORAGE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=pit
 BLOB_CONTAINER_NAME = "pitwebstoragecontainer"
 BLOB_DATABASE_FILE_NAME = "race_results.db"
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///race_results.db"
+# Construct the blob storage URI
+blob_uri = f"azureblob://{BLOB_STORAGE_CONNECTION_STRING}/{BLOB_CONTAINER_NAME}/{BLOB_DATABASE_FILE_NAME}"
+
+# Set the SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_DATABASE_URI"] = blob_uri
+
 db = SQLAlchemy(app)
 
 class RaceResult(db.Model):
