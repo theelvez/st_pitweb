@@ -26,9 +26,15 @@ def results():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    # Here, you would typically get the data from the form and save it to the database.
-    # For now, we'll just return a placeholder message.
+    data = request.form  # Get form data sent in the request
+    if not data:
+        return jsonify({'message': 'No data provided'}), 400
+    # Save the data to the database
+    result = RaceResult(name=data['name'], car=data['car'], run_number=int(data['run_number']), top_speed=float(data['top_speed']))
+    db.session.add(result)
+    db.session.commit()
     return jsonify({'message': 'Data received'}), 200
+
 
 @app.route('/upload_auto', methods=['POST'])
 def upload_auto():
