@@ -16,7 +16,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            animation: move 5s infinite linear, rotate 3s infinite linear;
+            animation: move-rotate 5s infinite linear;
         }
 
         @keyframes blink {
@@ -36,10 +36,6 @@
                 top: 0;
                 left: 0;
                 transform: rotate(0deg);
-        @keyframes move {
-            0% {
-                top: 0;
-                left: 0;
             }
             50% {
                 top: 50vh;
@@ -61,7 +57,7 @@
     <!-- Add more blinking elements as desired -->
     
     <div class="moving-image">
-        <img src="{{ url_for('static', filename='kevin_mauve.jpg') }}" alt="Rotating and Moving Image">
+        <img src="/static/kevin_mauve.jpg" alt="Rotating and Moving Image">
     </div>
 </body>
 </html>
