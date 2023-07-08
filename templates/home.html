@@ -1,17 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My Mauve Blinking Homepage</title>
+    <title>My Mauve Blinking Homepage with Rotating Image</title>
     <style>
         body {
-            background-color: mauve;
+            background-color: fuchsia;
+        }
+
+        .blinking {
+            animation: blink 1s infinite;
+        }
+
+        .moving-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: move-rotate 5s infinite linear;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes move-rotate {
+            0% {
+                top: 0;
+                left: 0;
+                transform: rotate(0deg);
+            }
+            50% {
+                top: 50vh;
+                left: 50vw;
+                transform: rotate(180deg);
+            }
+            100% {
+                top: 0;
+                left: 0;
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 <body>
     <h1>Welcome to My Mauve Blinking Homepage!</h1>
-    <p><blink>This text is blinking!</blink></p>
-    <p><blink>So is this text!</blink></p>
+    <p><span class="blinking">This text is blinking!</span></p>
+    <p><span class="blinking">So is this text!</span></p>
     <!-- Add more blinking elements as desired -->
+    
+    <div class="moving-image">
+        <img src="{{ url_for('static', filename='kevin_mauve.jpg') }}" alt="Rotating and Moving Image">
+    </div>
 </body>
 </html>
