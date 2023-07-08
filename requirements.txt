@@ -1,3 +1,2 @@
 flask-SQLAlchemy
-azure-storage-blob
-sqlalchemy-azure-blob-storage
+pymysql
