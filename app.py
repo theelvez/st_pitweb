@@ -24,16 +24,20 @@ def results():
     data = RaceResult.query.all()  # Get all race results from the database
     return render_template('results.html', data=data)
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['GET', 'POST'])
 def upload():
-    data = request.form  # Get form data sent in the request
-    if not data:
-        return jsonify({'message': 'No data provided'}), 400
-    # Save the data to the database
-    result = RaceResult(name=data['name'], car=data['car'], run_number=int(data['run_number']), top_speed=float(data['top_speed']))
-    db.session.add(result)
-    db.session.commit()
-    return jsonify({'message': 'Data received'}), 200
+    if request.method == 'POST':
+        data = request.form  # Get form data sent in the request
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+        # Save the data to the database
+        result = RaceResult(name=data['name'], car=data['car'], run_number=int(data['run_number']), top_speed=float(data['top_speed']))
+        db.session.add(result)
+        db.session.commit()
+        return jsonify({'message': 'Data received'}), 200
+    else:
+        return render_template('upload.html')
+
 
 
 @app.route('/upload_auto', methods=['POST'])
