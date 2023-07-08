@@ -24,9 +24,17 @@
             <th>Name</th>
             <th>Car</th>
             <th>Run Number</th>
-            <th>Personal Top Speed</th>
+            <th>Top Speed</th>
         </tr>
-        <!-- Race results will go here -->
+        {% for item in data %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.car }}</td>
+            <td>{{ item.run_number }}</td>
+            <td>{{ item.top_speed }}</td>
+        </tr>
+        {% endfor %}
     </table>
+
 </body>
 </html>
