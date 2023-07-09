@@ -72,13 +72,15 @@ def upload_auto():
     db.session.commit()
     return jsonify({"message": "Data received"}), 200
 
-@app.route("/emptydb", methods=["POST"])
+@app.route("/emptydb", methods=["GET", "POST"])
 def emptydb():
-    # Delete all records from the database
-    RaceResult.query.delete()
-    db.session.commit()
-
-    return jsonify({"message": "Database emptied"}), 200
+    if request.method == "GET":
+        return render_template("emptydb.html")
+    elif request.method == "POST":
+        # Delete all records from the database
+        RaceResult.query.delete()
+        db.session.commit()
+        return jsonify({"message": "Database emptied"}), 200
 
 @app.route("/about")
 def about():
