@@ -19,7 +19,7 @@
             const confirmation = confirmationInput.value.trim().toLowerCase();
 
             if (confirmation === 'yes') {
-                fetch('/empty_database', {
+                fetch('/emptydb', {
                     method: 'POST'
                 })
                 .then(response => response.json())
