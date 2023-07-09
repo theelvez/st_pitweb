@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Empty Database</title>
+</head>
+<body>
+    <h1>Empty Database</h1>
+    <button onclick="emptyDatabase()">Empty Database</button>
+
+    <script>
+        function emptyDatabase() {
+            fetch('/empty_database', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle the response here if needed
+                console.log(data);
+                alert(data.message);
+            })
+            .catch(error => {
+                // Handle any errors that occur during the request
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
