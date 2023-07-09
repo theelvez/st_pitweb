@@ -72,6 +72,10 @@ def upload_auto():
     db.session.commit()
     return jsonify({"message": "Data received"}), 200
 
+@app.route("/emptydb")
+def emptydb():
+    return render_template("emptydb.html")
+
 @app.route("/about")
 def about():
     return render_template("about.html")

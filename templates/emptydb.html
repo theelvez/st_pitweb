@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Empty Database</title>
+</head>
+<body>
+    <h1>Empty Database</h1>
+    <form onsubmit="confirmEmptyDatabase(event)">
+        <label for="confirmation">Please type "yes" to confirm:</label>
+        <input type="text" id="confirmation" name="confirmation" required>
+        <button type="submit">Empty Database</button>
+    </form>
+
+    <script>
+        function confirmEmptyDatabase(event) {
+            event.preventDefault();
+
+            const confirmationInput = document.getElementById('confirmation');
+            const confirmation = confirmationInput.value.trim().toLowerCase();
+
+            if (confirmation === 'yes') {
+                fetch('/emptydb', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle the response here if needed
+                    console.log(data);
+                    alert(data.message);
+                })
+                .catch(error => {
+                    // Handle any errors that occur during the request
+                    console.error('Error:', error);
+                });
+            } else {
+                alert('Please type "yes" to confirm emptying the database.');
+            }
+        }
+    </script>
+</body>
+</html>
