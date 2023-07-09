@@ -16,7 +16,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            animation: move 5s infinite linear, rotate 3s infinite linear;
+            animation: move-rotate 5s infinite linear;
         }
 
         @keyframes blink {
@@ -36,10 +36,6 @@
                 top: 0;
                 left: 0;
                 transform: rotate(0deg);
-        @keyframes move {
-            0% {
-                top: 0;
-                left: 0;
             }
             50% {
                 top: 50vh;
@@ -55,13 +51,23 @@
     </style>
 </head>
 <body>
-    <h1>Welcome to My Mauve Blinking Homepage!</h1>
+    <h1>Welcome to the Race Results Website!</h1>
     <p><span class="blinking">This text is blinking!</span></p>
     <p><span class="blinking">So is this text!</span></p>
-    <!-- Add more blinking elements as desired -->
     
     <div class="moving-image">
-        <img src="{{ url_for('static', filename='kevin_mauve.jpg') }}" alt="Rotating and Moving Image">
+        <img src="/static/kevin_mauve.jpg" alt="Rotating and Moving Image">
     </div>
+
+    <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/results">Results</a></li>
+            <li><a href="/upload">Upload</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/contact">Contact</a></li>
+        </ul>
+    </nav>
 </body>
 </html>
+
