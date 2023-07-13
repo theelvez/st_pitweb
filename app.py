@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc, distinct
+import random
+
 
 app = Flask(__name__)
 
@@ -34,8 +37,26 @@ def home():
 
 @app.route("/results")
 def results():
-    data = RaceResult.query.all()  # Get all race results from the database
-    return render_template("results.html", data=data)
+      
+    top_speed = RaceResult.query.order_by(desc("top_speed"))
+    run_number = RaceResult.query.order_by("run_number", desc("top_speed"))
+    name = RaceResult.query.order_by("name", "run_number")
+    leader = RaceResult.query.order_by(desc("top_speed")).first()
+    last = RaceResult.query.order_by(desc("id")).limit(5)
+    club = RaceResult.query.filter(RaceResult.top_speed > 200).order_by(RaceResult.name).with_entities(RaceResult.name).distinct()
+    
+    data = RaceResult.query.order_by(desc("top_speed"), "run_number", "name")
+    
+    return render_template("results.html", top_speed=top_speed, run_number=run_number, name=name, leader=leader, club=club, last=last)
+    
+@app.route("/onedriver")
+def onedriver():
+      
+    driver = RaceResult.query.filter(RaceResult.name == request.args.get('name'))
+    top_speed = RaceResult.query.filter(RaceResult.name == request.args.get('name')).order_by(desc("top_speed")).limit(1)
+    
+    return render_template("driver.html", name=request.args.get('name'), driver=driver, top_speed=top_speed)
+        
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
@@ -72,15 +93,9 @@ def upload_auto():
     db.session.commit()
     return jsonify({"message": "Data received"}), 200
 
-@app.route("/emptydb", methods=["GET", "POST"])
+@app.route("/emptydb")
 def emptydb():
-    if request.method == "GET":
-        return render_template("emptydb.html")
-    elif request.method == "POST":
-        # Delete all records from the database
-        RaceResult.query.delete()
-        db.session.commit()
-        return jsonify({"message": "Database emptied"}), 200
+    return render_template("emptydb.html")
 
 @app.route("/about")
 def about():
