@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Race Results: Individual Driver</title>
+    <link rel="stylesheet" href="/static/semantic.min.css">
+    <style>
+    body {
+        padding:50px;
+    }
+    
+    a {
+        color: white;
+    }
+    
+    p, li  {
+        
+        font-size:14pt;
+        line-height: 22pt;
+    }
+    
+    .column { 
+        
+        font-size:14pt; 
+    
+    }
+    
+    .huge {
+        
+        font-size: 60pt;
+        font-weight: bold;
+        text-transform: uppercase;
+         
+    }
+    
+    .less_huge {
+        
+        font-size: 50pt;
+        
+    }
+    
+    
+    
+    
+    </style>
+
+    <script src="/static/jquery-3.6.0.min.js"></script>
+    <script src="/static/semantic.min.js"></script>
+    <script>
+    
+    duration = 60000; // return after a minute
+    timeoutId = setTimeout(function() {
+        location.href="/results"; // RELOAD AFTER WE SHOW EACH SCREEN ONCE TO GET NEW AI
+    }, duration);
+    
+    </script>
+   
+        
+</head>
+<body>
+    
+    
+    <div class="ui container">
+    
+                
+        <p align="center"><img src="/static/tour_logo.jpg" width="500"></p>
+        
+                
+        <h1 class="huge" align="center">{{ name }}</h1>
+        <h2 class="less_huge" align="center">{% for item in top_speed %}{{ item.top_speed }}{% endfor %}  MPH</h2>
+        
+        <br><br>
+       
+       <div class="ui three column grid fluid">
+                   
+       
+           <div class="ui row">
+               <div class="ui column red"><h1>Car</h1></div>
+               <div class="ui column red"><h1>Run #</h1></div>
+               <div class="ui column red"><h1>Top Speed</h1></div>
+           </div>
+           
+           
+           {% for item in driver %}
+           
+               <div class="row">
+                   <div class="column"><h1>{{ item.car }}</h1></div>
+                   <div class="column"><h1>{{ item.run_number }}</h1></div>
+                   <div class="column"><h1>{{ item.top_speed }} MPH</h1></div>
+               </div>
+               
+           
+           {% endfor %} 
+            
+            
+       </div>
+    
+    </div>
+    
+    <br><br><br><br><br><br><br><br>
+   
+    
+
+</body>
+</html>

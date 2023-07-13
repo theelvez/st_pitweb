@@ -1,2 +1,7 @@
 flask-SQLAlchemy
 pymysql
+
+Some type of LLM. For testing I have 
+
+langchain.llms
+
