@@ -3,21 +3,18 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, distinct
 import random
 
-
 app = Flask(__name__)
 
-# MySQL database configuration
-DB_HOST = "pitwebdb.mysql.database.azure.com"
-DB_USER = "pwadmin"
-DB_PASSWORD = "sp33dtrack3R1!"
-DB_NAME = "race_results"
+# SQLite database configuration
+DB_NAME = "race_data.db"  # Replace with your SQLite database file name
 
-# Create the MySQL connection URL without SSL parameters
-DB_CONNECTION_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+# Create the SQLite connection URL
+DB_CONNECTION_URL = f"sqlite:///{DB_NAME}"
 
 # Set the SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_DATABASE_URI"] = DB_CONNECTION_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ECHO"] = True
 
 db = SQLAlchemy(app)
 
@@ -30,6 +27,7 @@ class RaceResult(db.Model):
 
     def __repr__(self):
         return f"<RaceResult {self.name}>"
+
 
 @app.route("/")
 def home():
@@ -93,9 +91,15 @@ def upload_auto():
     db.session.commit()
     return jsonify({"message": "Data received"}), 200
 
-@app.route("/emptydb")
+@app.route("/emptydb", methods=["GET", "POST"])
 def emptydb():
-    return render_template("emptydb.html")
+    if request.method == "GET":
+        return render_template("emptydb.html")
+    elif request.method == "POST":
+        # Delete all records from the database
+        RaceResult.query.delete()
+        db.session.commit()
+        return jsonify({"message": "Database emptied"}), 200
 
 @app.route("/about")
 def about():
@@ -106,4 +110,4 @@ def contact():
     return render_template("contact.html")
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000, debug=True)
