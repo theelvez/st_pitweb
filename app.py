@@ -17,13 +17,14 @@ app.config["SQLALCHEMY_ECHO"] = True
 
 db = SQLAlchemy(app)
 
+print("hey\n")
 
 class RaceResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(80), nullable=False)
+    device_id = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String(80), nullable=False)
     car = db.Column(db.String(120), nullable=False)
-    run = db.Column(db.Integer, nullable=False)
+    run_number = db.Column(db.Integer, nullable=False)
     top_speed = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
@@ -53,29 +54,29 @@ def results():
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .all()
     )
     run_number = (
-        RaceResult.query.order_by(RaceResult.run, desc(RaceResult.top_speed))
+        RaceResult.query.order_by(RaceResult.run_number, desc(RaceResult.top_speed))
         .with_entities(
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .all()
     )
     name = (
-        RaceResult.query.order_by(RaceResult.name, RaceResult.run)
+        RaceResult.query.order_by(RaceResult.name, RaceResult.run_number)
         .with_entities(
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .all()
@@ -86,7 +87,7 @@ def results():
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .first()
@@ -97,7 +98,7 @@ def results():
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .limit(5)
@@ -112,12 +113,12 @@ def results():
     )
 
     data = (
-        RaceResult.query.order_by(desc(RaceResult.top_speed), RaceResult.run, RaceResult.name)
+        RaceResult.query.order_by(desc(RaceResult.top_speed), RaceResult.run_number, RaceResult.name)
         .with_entities(
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .all()
@@ -149,7 +150,7 @@ def onedriver():
             RaceResult.device_id,
             RaceResult.name,
             RaceResult.car,
-            RaceResult.run,
+            RaceResult.run_number,
             RaceResult.top_speed,
         )
         .limit(1)
@@ -250,4 +251,4 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=80, debug=True)
