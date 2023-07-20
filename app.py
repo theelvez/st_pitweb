@@ -31,14 +31,14 @@ class RaceResult(db.Model):
         return f"<RaceResult {self.name}>"
 
 
-class Driver(db.Model):
+class Drivers(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(80), nullable=False)
+    device_id = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String(80), nullable=False)
     car = db.Column(db.String(120), nullable=False)
 
     def __repr__(self):
-        return f"<Driver {self.name}>"
+        return f"<Drivers {self.name}>"
 
 
 @app.route("/")
@@ -162,7 +162,7 @@ def onedriver():
     )
 
 
-@app.route("/upload", methods=["GET", "POST"])
+@app.route("/upload_deprecated", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
         data = request.form  # Get form data sent in the request
@@ -197,7 +197,7 @@ def upload():
         return render_template("upload.html")
 
 
-@app.route("/upload_auto", methods=["POST"])
+@app.route("/upload_auto_deprecated", methods=["POST"])
 def upload_auto():
     data = request.get_json()  # Get JSON data sent in the request
     if not data:
@@ -227,6 +227,53 @@ def upload_auto():
     db.session.add(result)
     db.session.commit()
     return jsonify({"message": "Data received"}), 200
+
+@app.route("/upload_run_result", methods=["POST"])
+def upload_run_result():
+    print("upload_run_result: ")
+    data = request.get_data(as_text=True)
+    print(data)
+    print("\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    device_id = int(values[0].strip())
+    run_number = device_id
+    top_speed = float(values[1].strip())
+
+    db_row = Drivers.query.filter(Drivers.device_id == device_id).first()
+    if not db_row:
+        return jsonify({"message": "error, couldn't find device id in Drivers table"}), 400
+
+    name = db_row.name
+    car = db_row.car
+
+    print("-------")
+    print(device_id)
+    print(run_number)
+    print(top_speed)
+    print(name)
+    print(car)
+    print("-------")
+
+    # Save the race result
+    result = RaceResult(
+        device_id=device_id,
+        name=name,
+        car=car,
+        run_number=run_number,
+        top_speed=top_speed,
+    )
+    db.session.add(result)
+    db.session.commit()
+    return jsonify({"message": "Data received"}), 200
+
+@app.route("/upload_run_data", methods=["POST"])
+def upload_run_data():
+     return jsonify({"message": "not implemented"}), 400
 
 
 @app.route("/emptydb", methods=["GET", "POST"])
