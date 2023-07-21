@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, distinct
+import csv
 
 app = Flask(__name__)
 
@@ -40,6 +41,12 @@ class Drivers(db.Model):
     def __repr__(self):
         return f"<Drivers {self.name}>"
 
+class RunData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, nullable=False)
+    lat = db.Column(db.Float, nullable=False)
+    long = db.Column(db.Float, nullable=False)
+    speed = db.Column(db.Float, nullable=False)
 
 @app.route("/")
 def home():
@@ -273,7 +280,29 @@ def upload_run_result():
 
 @app.route("/upload_run_data", methods=["POST"])
 def upload_run_data():
-     return jsonify({"message": "not implemented"}), 400
+    print("upload_run_data:")
+    data = request.get_data(as_text=True)
+    #print("BLOB----------------")
+    #print(data)
+    #print("PARSED----------------")
+    data = data.split("\r\n")
+    dictReader = csv.DictReader(data, fieldnames = ['device_id', 'latitude', 'longitude', 'speed'], delimiter = ',', quotechar = '"')
+
+    #index = 0
+    for row in dictReader:
+        newRow = RunData(
+            device_id=row['device_id'],
+            lat=row['latitude'],
+            long=row['longitude'],
+            speed=row['speed'],
+        )
+        db.session.add(newRow)
+
+    db.session.commit()
+        
+    print("END----------------")
+
+    return jsonify({"message": "Data received"}), 200
 
 
 @app.route("/emptydb", methods=["GET", "POST"])
