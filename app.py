@@ -285,7 +285,7 @@ def upload_run_data():
     #print("BLOB----------------")
     #print(data)
     #print("PARSED----------------")
-    data = data.split("\r\n")
+    data = data.split("\n")
     dictReader = csv.DictReader(data, fieldnames = ['device_id', 'latitude', 'longitude', 'speed'], delimiter = ',', quotechar = '"')
 
     #index = 0
