@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Raw DB Tables</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: larger;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 10px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+    </style>
+</head>
+<body>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/raw-tables">Raw Tables View</a></li>
+</ul>
+    <h1>SVTdF Raw DB Tables</h1>
+<!-------------------------------------------------------->
+    <h3 class="table_title">device_table</h3>
+    <table style="font-family:monospace">
+        <tr class="column_name">
+            <td>mac_address</td>
+            <td>device_id</td>
+        </tr>
+    {% for item in devices %}
+        <tr>
+            <td >{{ item.mac_address }}</td>
+            <td style="text-align: right;">{{ item.device_id }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+<!-------------------------------------------------------->
+    <h3 class="table_title">car_table</h3>
+    <table style="font-family:monospace">
+        <tr class="column_name">
+            <td>car_id</td>
+            <td>car_description</td>
+            <td>car_owner</td>
+        </tr>
+        {% for item in cars %}
+        <tr>
+            <td >{{ item.car_id }}</td>
+            <td >{{ item.car_description }}</td>
+            <td >{{ item.car_owner }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+<!-------------------------------------------------------->
+<h3 class="table_title">device_assignment_table</h3>
+<table style="font-family:monospace">
+    <tr class="column_name">
+        <td>device_id</td>
+        <td>car_id</td>
+        <td>device_status</td>
+    </tr>
+    {% for item in device_assignments %}
+    <tr>
+        <td >{{ item.device_id }}</td>
+        <td >{{ item.car_id }}</td>
+        <td >{{ item.device_status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<!-------------------------------------------------------->
+<h3 class="table_title">run_table</h3>
+<table style="font-family:monospace">
+    <tr class="column_name">
+        <td>result_id</td>
+        <td>driver_name</td>
+        <td>device_id</td>
+        <td>heat</td>
+        <td>run</td>
+        <td>gps_speed_timestamp</td>
+        <td>gps_top_speed</td>
+        <td>laser_speed_timestamp</td>
+        <td>laser_top_speed</td>
+        <td>top_speed</td>
+        <td>datafile_path</td>
+    </tr>
+    {% for item in runs %}
+    <tr>
+        <td>{{ item.result_id }}</td>
+        <td>{{ item.driver_name }}</td>
+        <td>{{ item.device_id }}</td>
+        <td>{{ item.heat }}</td>
+        <td>{{ item.run }}</td>
+        <td>{{ item.gps_speed_timestamp }}</td>
+        <td>{{ item.gps_top_speed }}</td>
+        <td>{{ item.laser_speed_timestamp }}</td>
+        <td>{{ item.laser_top_speed }}</td>
+        <td>{{ item.top_speed }}</td>
+        <td>{{ item.datafile_path }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<!-------------------------------------------------------->
+
+
+</body>
+</html>
+
