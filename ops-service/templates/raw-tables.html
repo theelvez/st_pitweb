@@ -12,7 +12,7 @@
         a:link { color: #B4DCFE; }
         a:visited { color: #749DD5; }
         th,td {
-            padding: 10px ;
+            padding: 5px ;
         }
         tr {
             background-color: #2f2f2f;
@@ -26,13 +26,141 @@
         .column_name {
             color: #749DD5;
         }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
     </style>
+    <script>
+        function logMessage(message) {
+            document.getElementById('error_console').innerText += message 
+            document.getElementById('error_console').innerHTML += "<br>"
+        }
+        function getFieldValue(row, field_name) {
+            return row.children.namedItem(field_name).innerText
+        }
+        // returns a Map mapping from field values to an Array of rows with that value
+        function collectValues(rows, field_name) {
+            var map = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const value = getFieldValue(rows[i], field_name);
+                const existingArray = map.get(value);
+                if (existingArray === undefined) {
+                    map.set(value, [ i ]);
+                } else {
+                    existingArray.push(i);
+                }
+            }
+            return map;
+        }
+        function runValidationChecks() {
+            const device_table_rows = document.getElementsByName('device_table_row');
+            const driver_table_rows = document.getElementsByName('driver_table_row');
+            const car_table_rows = document.getElementsByName('car_table_row');
+            const device_assignment_table_rows = document.getElementsByName('device_assignment_table_row');
+            const run_table_rows = document.getElementsByName('run_table_row');
+
+            //
+            // [run_table] Check that all device IDs exist in the device table
+            //
+            var device_map = collectValues(device_table_rows, 'device_id');
+            var run_devices = collectValues(run_table_rows, 'device_id');
+            run_devices.forEach((run_rows,run_device_id,m) => {
+                if (device_map.get(run_device_id) === undefined) {
+                    for (let i = 0; i < run_rows.length; i++) {
+                        run_table_rows[run_rows[i]].children.namedItem('device_id').classList.add('error_cell');
+                        logMessage("ERROR[1]: device_id " + run_device_id + " was found in run_table, but not in device_table")
+                    }
+                }
+            });
+            //
+            // [run_table] Check that all device IDs exist in the device assignment table
+            //
+            var dat_device_map = collectValues(device_assignment_table_rows, 'device_id');
+            run_devices.forEach((run_rows,run_device_id,m) => {
+                if (dat_device_map.get(run_device_id) === undefined) {
+                    for (let i = 0; i < run_rows.length; i++) {
+                        run_table_rows[run_rows[i]].children.namedItem('device_id').classList.add('error_cell');
+                        logMessage("ERROR[2]: device_id " + run_device_id + " was found in run_table, but not in device_assignment_table")
+                    }
+                }
+            });
+            //
+            // [run_table] Check that all driver IDs exist in the driver table
+            //
+            var driver_map = collectValues(driver_table_rows, 'driver_id');
+            var run_drivers = collectValues(run_table_rows, 'driver_id');
+            run_drivers.forEach((driver_rows,run_driver,_m) => {
+                if (driver_map.get(run_driver) === undefined) {
+                    for (let i = 0; i < driver_rows.length; i++) {
+                        run_table_rows[driver_rows[i]].children.namedItem('driver_id').classList.add('error_cell');
+                        logMessage("ERROR[3]: driver_id " + run_driver + " was found in run_table, but not in driver_table");
+                    }
+                }
+            });
+            //
+            // [run_table] Check that all car IDs exist in the car table
+            //
+            var car_map = collectValues(car_table_rows, 'car_id');
+            var run_cars = collectValues(run_table_rows, 'car_id');
+            run_cars.forEach((car_rows,run_car,m) => {
+                if (car_map.get(run_car) === undefined) {
+                    for (let i = 0; i < car_rows.length; i++) {
+                        run_table_rows[car_rows[i]].children.namedItem('car_id').classList.add('error_cell');
+                        logMessage("ERROR[4]: car_id " + run_car + " was found in run_table, but not in car_table");
+                    }
+                }
+            });
+            //
+            // [device_assignment_table] Check that all car IDs exist in car table
+            //
+            var dat_cars = collectValues(device_assignment_table_rows, 'car_id')
+            dat_cars.forEach((dat_rows,dat_car,m) => {
+                if (dat_car !== "None") {
+                    if (car_map.get(dat_car) === undefined) {
+                        for (let i = 0; i < dat_rows.length; i++) {
+                            device_assignment_table_rows[dat_rows[i]].children.namedItem('car_id').classList.add('error_cell');
+                            logMessage("ERROR[5]: car_id " + dat_car + " was found in device_assignment_table, but not in car_table");
+                        }
+                    }
+                }
+            });
+            //
+            // [device_assignment_table] Check that all device IDs exist in device table
+            //
+            var dat_devices = collectValues(device_assignment_table_rows, 'device_id')
+            dat_devices.forEach((dat_rows,dat_device,m) => {
+                if (device_map.get(dat_device) === undefined) {
+                    for (let i = 0; i < dat_rows.length; i++) {
+                        device_assignment_table_rows[dat_rows[i]].children.namedItem('device_id').classList.add('error_cell');
+                        logMessage("ERROR[6]: device_id " + dat_device + " was found in device_assignment_table, but not in device_table");
+                    }
+                }
+            });
+            //
+            // [driver_table] Check that each driver has the correct number of runs in the run table
+            //
+            var run_drivers = collectValues(run_table_rows, 'driver_id');
+            run_drivers.forEach((run_rows,driver,m) => {
+                const driver_index = driver-1;
+                if (driver_index < driver_table_rows.length) {
+                    const run_count = driver_table_rows[driver_index].children.namedItem('run_count').innerText;
+                    if (run_count != run_rows.length) {
+                        driver_table_rows[driver_index].children.namedItem('run_count').classList.add('error_cell');
+                        logMessage("ERROR[7]: driver " + driver + " has a run_count of " + run_count + " in driver_table, but found " + run_rows.length + " entries in run_table");
+                    }
+                }
+            });
+        }
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
 </head>
-<body>
+<body onload="runValidationChecks()">
     <ul>
         <li><a href="/">Home</a></li>
         <li><a href="/raw-tables">Raw Tables View</a></li>
-</ul>
+        <li><a href="/schedule">Schedule View</a></li>
+    </ul>
     <h1>SVTdF Raw DB Tables</h1>
 <!-------------------------------------------------------->
     <h3 class="table_title">device_table</h3>
@@ -42,11 +170,27 @@
             <td>device_id</td>
         </tr>
     {% for item in devices %}
-        <tr>
-            <td >{{ item.mac_address }}</td>
-            <td style="text-align: right;">{{ item.device_id }}</td>
+        <tr name="device_table_row">
+            <td name="mac_address">{{ item.mac_address }}</td>
+            <td name="device_id" style="text-align: right;">{{ item.device_id }}</td>
         </tr>
     {% endfor %}
+    </table>
+<!-------------------------------------------------------->
+    <h3 class="table_title">driver_table</h3>
+    <table style="font-family:monospace">
+        <tr class="column_name">
+            <td>driver_id</td>
+            <td>driver_name</td>
+            <td>run_count</td>
+        </tr>
+        {% for item in drivers %}
+        <tr name="driver_table_row">
+            <td name="driver_id">{{ item.driver_id }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="run_count">{{ item.run_count }}</td>
+        </tr>
+        {% endfor %}
     </table>
 <!-------------------------------------------------------->
     <h3 class="table_title">car_table</h3>
@@ -57,10 +201,10 @@
             <td>car_owner</td>
         </tr>
         {% for item in cars %}
-        <tr>
-            <td >{{ item.car_id }}</td>
-            <td >{{ item.car_description }}</td>
-            <td >{{ item.car_owner }}</td>
+        <tr name="car_table_row">
+            <td name="car_id">{{ item.car_id }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td name="car_owner">{{ item.car_owner }}</td>
         </tr>
         {% endfor %}
     </table>
@@ -70,13 +214,11 @@
     <tr class="column_name">
         <td>device_id</td>
         <td>car_id</td>
-        <td>device_status</td>
     </tr>
     {% for item in device_assignments %}
-    <tr>
-        <td >{{ item.device_id }}</td>
-        <td >{{ item.car_id }}</td>
-        <td >{{ item.device_status }}</td>
+    <tr name="device_assignment_table_row">
+        <td name="device_id">{{ item.device_id }}</td>
+        <td name="car_id">{{ item.car_id }}</td>
     </tr>
     {% endfor %}
 </table>
@@ -85,10 +227,11 @@
 <table style="font-family:monospace">
     <tr class="column_name">
         <td>result_id</td>
-        <td>driver_name</td>
-        <td>device_id</td>
         <td>heat</td>
         <td>run</td>
+        <td>driver_id</td>
+        <td>car_id</td>
+        <td>device_id</td>
         <td>gps_speed_timestamp</td>
         <td>gps_top_speed</td>
         <td>laser_speed_timestamp</td>
@@ -97,23 +240,26 @@
         <td>datafile_path</td>
     </tr>
     {% for item in runs %}
-    <tr>
-        <td>{{ item.result_id }}</td>
-        <td>{{ item.driver_name }}</td>
-        <td>{{ item.device_id }}</td>
-        <td>{{ item.heat }}</td>
-        <td>{{ item.run }}</td>
-        <td>{{ item.gps_speed_timestamp }}</td>
-        <td>{{ item.gps_top_speed }}</td>
-        <td>{{ item.laser_speed_timestamp }}</td>
-        <td>{{ item.laser_top_speed }}</td>
-        <td>{{ item.top_speed }}</td>
-        <td>{{ item.datafile_path }}</td>
+    <tr name="run_table_row">
+        <td name="result_id">{{ item.result_id }}</td>
+        <td name="heat">{{ item.heat }}</td>
+        <td name="run">{{ item.run }}</td>
+        <td name="driver_id">{{ item.driver_id }}</td>
+        <td name="car_id">{{ item.car_id }}</td>
+        <td name="device_id">{{ item.device_id }}</td>
+        <td name="gps_speed_timestamp">{{ item.gps_speed_timestamp }}</td>
+        <td name="gps_top_speed">{{ item.gps_top_speed }}</td>
+        <td name="laser_speed_timestamp">{{ item.laser_speed_timestamp }}</td>
+        <td name="laser_top_speed">{{ item.laser_top_speed }}</td>
+        <td name="top_speed">{{ item.top_speed }}</td>
+        <td name="datafile_path">{{ item.datafile_path }}</td>
     </tr>
     {% endfor %}
 </table>
 <!-------------------------------------------------------->
+<div id="error_console" style="font-family:monospace">
 
+</div>
 
 </body>
 </html>

@@ -24,13 +24,21 @@ print("ops-service starting...\n")
 # schema
 # ------------------------------------------------------------
 class DeviceTable(db.Model):
+    __tablename__ = 'device_table'
     mac_address = db.Column(db.Text, primary_key=True)
     device_id = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
         return f"<Device {self.mac_address} {self.device_id}>"
+    
+class DriverTable(db.Model):
+    __tablename__ = 'driver_table'
+    driver_id = db.Column(db.Integer, primary_key=True)
+    driver_name = db.Column(db.Text, nullable=False)
+    run_count = db.Column(db.Integer, nullable=False)
 
 class CarTable(db.Model):
+    __tablename__ = 'car_table'
     car_id = db.Column(db.Integer, primary_key=True)
     car_description = db.Column(db.Text, nullable=False)
     car_owner = db.Column(db.Text, nullable=False)
@@ -39,6 +47,7 @@ class CarTable(db.Model):
         return f"<Car {self.car_id} {self.car_description} {self.car_owner}>"
 
 class DeviceAssignmentTable(db.Model):
+    __tablename__ = 'device_assignment_table'
     device_id = db.Column(db.Integer, primary_key=True)
     car_id = db.Column(db.Integer, nullable=False)
     device_status = db.Column(db.Text, nullable=False)
@@ -47,11 +56,13 @@ class DeviceAssignmentTable(db.Model):
         return f"<DeviceAssignment {self.device_id} {self.car_id} {self.device_status}>"
 
 class RunTable(db.Model):
+    __tablename__ = 'run_table'
     result_id = db.Column(db.Integer, primary_key=True)
-    driver_name = db.Column(db.Text, nullable=False)
-    device_id = db.Column(db.Integer, nullable=False)
     heat = db.Column(db.Integer, nullable=False)
     run = db.Column(db.Integer, nullable=False)
+    driver_id = db.Column(db.Integer, nullable=False)
+    car_id = db.Column(db.Integer, nullable=False)
+    device_id = db.Column(db.Integer, nullable=False)
     gps_speed_timestamp = db.Column(db.Text, nullable=False)
     gps_top_speed = db.Column(db.Float, nullable=False)
     laser_speed_timestamp = db.Column(db.Text, nullable=False)
@@ -62,24 +73,40 @@ class RunTable(db.Model):
     def __repr__(self):
         return f"<Run {self.result_id}>"
 
-#	result_id
-#	driver_name
-#	device_id
-#	heat
-#	run
-#	gps_speed_timestamp
-#	gps_top_speed
-#	laser_speed_timestamp
-#	laser_top_speed
-#	top_speed
-#	datafile_path
-
 # ------------------------------------------------------------
 # /
 # ------------------------------------------------------------
 @app.route("/")
 def home():
     return render_template("home.html")
+
+# ------------------------------------------------------------
+# /
+# ------------------------------------------------------------
+@app.route("/schedule")
+def schedule():
+    schedule = RunTable.query.order_by(RunTable.heat, RunTable.run).join(
+        DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+    ).join(
+        CarTable, RunTable.car_id == CarTable.car_id
+    ).join(
+        DriverTable, DriverTable.driver_id == RunTable.driver_id
+    ).with_entities(
+        RunTable.heat,
+        RunTable.run,
+        RunTable.car_id,
+        RunTable.device_id,
+        RunTable.top_speed,
+        DriverTable.driver_id,
+        DriverTable.driver_name,
+        DeviceAssignmentTable.car_id.label('device_in_car'),
+        CarTable.car_description
+    )
+    #print(schedule)
+    
+    return render_template(
+        "schedule.html",
+        schedule=schedule.all())
 
 # ------------------------------------------------------------
 # /raw-tables
@@ -92,6 +119,15 @@ def raw_tables():
         .with_entities(
             DeviceTable.mac_address, 
             DeviceTable.device_id
+        )
+        .all()
+    )
+    drivers = (
+        DriverTable.query
+        .with_entities(
+            DriverTable.driver_id,
+            DriverTable.driver_name,
+            DriverTable.run_count
         )
         .all()
     )
@@ -108,8 +144,7 @@ def raw_tables():
         DeviceAssignmentTable.query
         .with_entities(
             DeviceAssignmentTable.device_id,
-            DeviceAssignmentTable.car_id,
-            DeviceAssignmentTable.device_status
+            DeviceAssignmentTable.car_id
         )
         .all()
     )
@@ -117,10 +152,11 @@ def raw_tables():
         RunTable.query
         .with_entities(
             RunTable.result_id,
-            RunTable.driver_name,
-            RunTable.device_id,
             RunTable.heat,
             RunTable.run,
+            RunTable.driver_id,
+            RunTable.car_id,
+            RunTable.device_id,
             RunTable.gps_speed_timestamp,
             RunTable.gps_top_speed,
             RunTable.laser_speed_timestamp,
@@ -135,10 +171,88 @@ def raw_tables():
     return render_template(
         "raw-tables.html", 
         devices=devices,
+        drivers=drivers,
         cars=cars,
         device_assignments=device_assignments,
         runs=runs,
     )
+
+# ------------------------------------------------------------
+# /upload_run_result
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{mac_address}},{{gps_top_speed}},{{gps_speed_timestamp}}
+@app.route("/upload_run_result", methods=["POST"])
+def upload_run_result():
+    print("upload_run_result: ")
+    data = request.get_data(as_text=True)
+    print(data)
+    print("\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    mac_address = values[0].strip()
+    gps_top_speed = float(values[1].strip())
+
+    device_table_row = DeviceTable.query.filter(DeviceTable.mac_address == mac_address).first()
+    if not device_table_row:
+        return jsonify({"message": f"error, couldn't find device mac_address of '{mac_address}' in DeviceTable"}), 400
+    
+    device_id = device_table_row.device_id
+
+    device_assignment_table_row = DeviceAssignmentTable.query.filter(DeviceAssignmentTable.device_id == device_id).first()
+    if not device_assignment_table_row:
+        return jsonify({"message": f"error, couldn't find device_id of '{device_id}' in DeviceAssignmentTable"}), 400
+
+    car_id = device_assignment_table_row.car_id
+
+    car_table_row = CarTable.query.filter(CarTable.car_id == car_id).first()
+    if not car_table_row:
+        return jsonify({"message": f"error, couldn't find car_id of '{car_id}' in CarTable"}), 400
+
+    car_description = car_table_row.car_description
+
+    #
+    # TODO TODO TODO: need current heat number to disambiguate using
+    #                 {heat, device_id, car_id} to lookup in run table!!!
+    #
+    run_table_row = RunTable.query.filter(
+        (RunTable.device_id == device_id) and (RunTable.car_id == car_id)).first()
+    if not run_table_row:
+        return jsonify({"message": f"error, couldn't find device_id of '{device_id}' in RunTable"}), 400
+
+    result_id = run_table_row.result_id
+    driver_name = run_table_row.driver_name
+    heat = run_table_row.heat
+    run = run_table_row.run
+
+    print("-------")
+    print(f"mac_address: {mac_address}")
+    print(f"gps_top_speed: {gps_top_speed}")
+    print(f"device_id: {device_id}")
+    print(f"car_id: {car_id}")
+    print(f"car_description: {car_description}")
+    print(f"result_id: {result_id}")
+    print(f"driver_name: {driver_name}")
+    print(f"heat: {heat}")
+    print(f"run: {run}")
+    print("-------")
+
+    # Save the race result
+    # result = RaceResult(
+    #     device_id=device_id,
+    #     name=name,
+    #     car=car,
+    #     run_number=run_number,
+    #     top_speed=top_speed,
+    # )
+    # db.session.add(result)
+    # db.session.commit()
+    return jsonify({"message": "Data received"}), 200
 
 # ------------------------------------------------------------
 # main

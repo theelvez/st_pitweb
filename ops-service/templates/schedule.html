@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Schedule View</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: larger;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 10px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+    </style>
+    <script>
+        function runValidationChecks() {
+            const rows = document.getElementsByName('schedule_row');
+
+            //
+            // Check that the same driver isn't listed more than once in a given heat
+            //
+            // map(heat -> map(driver_id -> array(rows)))
+            var heat_map = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const driver_id = rows[i].children.namedItem('driver_id').innerText;
+                const heat = rows[i].children.namedItem('heat').innerText;
+                if (heat_map.get(heat) === undefined) {
+                    heat_map.set(heat, new Map());
+                }
+                var curr = heat_map.get(heat).get(driver_id);
+                if (curr === undefined) {
+                    heat_map.get(heat).set(driver_id, [i]);
+                } else {
+                    curr.push(i);
+                    heat_map.get(heat).set(driver_id, curr);
+                }
+            }
+            console.log(heat_map);
+            heat_map.forEach((driver_map, h_key, h_map) => {
+                driver_map.forEach((row_list, d_key, d_map) => {
+                    const heat = h_key;
+                    const driver_id = d_key;
+                    if (row_list.length > 1) {
+                        for (const row of row_list) {
+                            rows[row].children.namedItem('heat').classList.add('error_cell')
+                            rows[row].children.namedItem('driver_name').classList.add('error_cell')
+                        }
+                    }
+                })
+            });
+
+        }
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/raw-tables">Raw Tables View</a></li>
+        <li><a href="/schedule">Schedule View</a></li>
+</ul>
+    <h1>SVTdF Schedule View</h1>
+<!-------------------------------------------------------->
+    <h3 class="table_title">Schedule</h3>
+    <table id="schedule_view" style="font-family:monospace">
+        <tr class="column_name">
+            <!--schedule-->
+            <td>heat</td>
+            <td>run</td>
+            <!--driver-->
+            <td>driver_name</td>
+            <td>drv_id</td>
+            <!--device-->
+            <td>device_id</td>
+            <td>device_in_car</td>
+            <!--car-->
+            <td>car_description</td>
+            <td>car_id</td>
+            <!--result-->
+            <td>top_speed</td>
+        </tr>
+    {% for item in schedule %}
+        <tr name="schedule_row">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="driver_id">{{ item.driver_id }}</td>
+            <td name="device_id">{{ item.device_id }}</td>
+            <td name="device_in_car">{{ item.device_in_car }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td name="car_id">{{ item.car_id }}</td>
+            <td name="top_speed">{{ item.top_speed }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+</body>
+</html>
