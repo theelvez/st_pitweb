@@ -50,10 +50,9 @@ class DeviceAssignmentTable(db.Model):
     __tablename__ = 'device_assignment_table'
     device_id = db.Column(db.Integer, primary_key=True)
     car_id = db.Column(db.Integer, nullable=False)
-    device_status = db.Column(db.Text, nullable=False)
 
     def __repr__(self):
-        return f"<DeviceAssignment {self.device_id} {self.car_id} {self.device_status}>"
+        return f"<DeviceAssignment {self.device_id} {self.car_id}>"
 
 class RunTable(db.Model):
     __tablename__ = 'run_table'
@@ -177,6 +176,330 @@ def raw_tables():
         runs=runs,
     )
 
+# ------------------------------------------------------------
+# /remove_device_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{mac_address}}
+@app.route("/remove_device_table_record", methods=["POST"])
+def remove_device_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_device_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    mac_address = data.strip()
+    DeviceTable.query.filter_by(mac_address = mac_address).delete()
+    db.session.commit()
+
+    return jsonify({"message": "device_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_device_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{mac_address}},{{device_id}}
+@app.route("/add_device_table_record", methods=["POST"])
+def add_device_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_device_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    mac_address = values[0].strip().upper()
+    device_id = values[1].strip()
+
+    print(f"QUERY FIRST in add operation")
+    results = DeviceTable.query.filter_by(mac_address = mac_address)
+    if (results.count() == 0):
+        # TODO: VALIDATE MAC_ADDRESS format
+
+        result = DeviceTable(
+            mac_address=mac_address,
+            device_id=device_id,
+        )
+        db.session.add(result)
+        db.session.commit()
+
+        # TODO: ERROR HANDLING  
+    else:
+        print(f"MODIFY RECORD {results.first().mac_address}")
+        results.first().device_id = device_id
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "device_table updated"}), 200
+
+# ------------------------------------------------------------
+# /remove_driver_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{driver_id}}
+@app.route("/remove_driver_table_record", methods=["POST"])
+def remove_driver_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_driver_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    driver_id = data.strip()
+    DriverTable.query.filter_by(driver_id = driver_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": "driver_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_driver_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{driver_id}},{{driver_name}},{{run_count}}
+@app.route("/add_driver_table_record", methods=["POST"])
+def add_driver_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_driver_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    driver_id = values[0].strip()
+    driver_name = values[1].strip()
+    run_count = values[2].strip()
+
+    print(f"QUERY FIRST in add operation")
+    results = DriverTable.query.filter_by(driver_id = driver_id)
+    if (results.count() == 0):
+        # TODO: VALIDATE MAC_ADDRESS format
+
+        result = DriverTable(
+            driver_id = driver_id,
+            driver_name = driver_name,
+            run_count = run_count
+        )
+        db.session.add(result)
+        db.session.commit()
+
+        # TODO: ERROR HANDLING  
+    else:
+        print(f"MODIFY RECORD {results.first().driver_id}")
+        results.first().driver_name = driver_name
+        results.first().run_count = run_count
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "driver_table updated"}), 200
+    
+# ------------------------------------------------------------
+# /remove_car_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{car_id}}
+@app.route("/remove_car_table_record", methods=["POST"])
+def remove_car_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_car_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    car_id = data.strip()
+    CarTable.query.filter_by(car_id = car_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": "car_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_car_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{car_id}},{{car_description}},{{car_owner}}
+@app.route("/add_car_table_record", methods=["POST"])
+def add_car_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_car_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    car_id = values[0].strip()
+    car_description = values[1].strip()
+    car_owner = values[2].strip()
+
+    print(f"QUERY FIRST in add operation")
+    results = CarTable.query.filter_by(car_id = car_id)
+    if (results.count() == 0):
+        # TODO: VALIDATE MAC_ADDRESS format
+
+        result = CarTable(
+            car_id = car_id,
+            car_description = car_description,
+            car_owner = car_owner
+        )
+        db.session.add(result)
+        db.session.commit()
+
+        # TODO: ERROR HANDLING  
+    else:
+        print(f"MODIFY RECORD {results.first().car_id}")
+        results.first().car_description = car_description
+        results.first().car_owner = car_owner
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "car_table updated"}), 200
+
+# ------------------------------------------------------------
+# /remove_device_assignment_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{device_id}}
+@app.route("/remove_device_assignment_table_record", methods=["POST"])
+def remove_device_assignment_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_device_assignment_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    device_id = data.strip()
+    DeviceAssignmentTable.query.filter_by(device_id = device_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": "device_assignment_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_device_assignment_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{device_id}},{{car_id}}
+@app.route("/add_device_assignment_table_record", methods=["POST"])
+def add_device_assignment_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_device_assignment_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    device_id = values[0].strip()
+    car_id = values[1].strip()
+
+    print(f"QUERY FIRST in add operation")
+    results = DeviceAssignmentTable.query.filter_by(device_id = device_id)
+    if (results.count() == 0):
+        # TODO: VALIDATE MAC_ADDRESS format
+
+        result = DeviceAssignmentTable(
+            device_id = device_id,
+            car_id = car_id
+        )
+        db.session.add(result)
+        db.session.commit()
+
+        # TODO: ERROR HANDLING  
+    else:
+        print(f"MODIFY RECORD {results.first().device_id}")
+        results.first().car_id = car_id
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "device_assignment_table updated"}), 200
+# ------------------------------------------------------------
+# /remove_run_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{result_id}}
+@app.route("/remove_run_table_record", methods=["POST"])
+def remove_run_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_run_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    result_id = data.strip()
+    RunTable.query.filter_by(result_id = result_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": "run_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_run_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{car_id}},{{car_description}},{{car_owner}}
+@app.route("/add_run_table_record", methods=["POST"])
+def add_run_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_run_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    result_id = values[0].strip()
+    heat = values[1].strip()
+    run = values[2].strip()
+    driver_id = values[3].strip()
+    car_id = values[4].strip()
+    device_id = values[5].strip()
+    gps_speed_timestamp = values[6].strip()
+    gps_top_speed = values[7].strip()
+    laser_speed_timestamp = values[8].strip()
+    laser_top_speed = values[9].strip()
+    top_speed = values[10].strip()
+    datafile_path = values[11].strip() 
+
+    print(f"QUERY FIRST in add operation")
+    results = RunTable.query.filter_by(result_id = result_id)
+    if (results.count() == 0):
+        result = RunTable(
+            result_id = result_id,
+            heat = heat,
+            run = run,
+            driver_id = driver_id,
+            car_id = car_id,
+            device_id = device_id,
+            gps_speed_timestamp = gps_speed_timestamp,
+            gps_top_speed = gps_top_speed,
+            laser_speed_timestamp = laser_speed_timestamp,
+            laser_top_speed = laser_top_speed,
+            top_speed = top_speed,
+            datafile_path = datafile_path 
+        )
+        db.session.add(result)
+        db.session.commit()
+    else:
+        print(f"MODIFY RECORD {results.first().result_id}")
+        results.first().heat = heat
+        results.first().run = run
+        results.first().driver_id = driver_id
+        results.first().car_id = car_id
+        results.first().device_id = device_id
+        results.first().gps_speed_timestamp = gps_speed_timestamp
+        results.first().gps_top_speed = gps_top_speed
+        results.first().laser_speed_timestamp = laser_speed_timestamp
+        results.first().laser_top_speed = laser_top_speed
+        results.first().top_speed = top_speed
+        results.first().datafile_path = datafile_path
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "run_table updated"}), 200
 # ------------------------------------------------------------
 # /upload_run_result
 # ------------------------------------------------------------
