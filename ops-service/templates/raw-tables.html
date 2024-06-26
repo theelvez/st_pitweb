@@ -72,8 +72,18 @@
             });
         }
         function startModifyDeviceTable(mac_address, device_id) {
-            document.getElementById('dt_mac_address_input').value = mac_address;
-            document.getElementById('dt_device_id_input').value = device_id;
+            const cells = document.getElementById("device_table_row_" + mac_address).children;
+            const mac_address_input= document.getElementById('dt_mac_address_input');
+            const device_id_input = document.getElementById('dt_device_id_input');
+            mac_address_input.value = mac_address;
+            device_id_input.value = device_id;
+
+            cells.namedItem("mac_address").innerHTML = "";
+            cells.namedItem("device_id").innerHTML = "";
+            cells.namedItem("mac_address").appendChild(mac_address_input);
+            cells.namedItem("device_id").appendChild(device_id_input);
+            cells.namedItem("modify_button").children[0].onclick= addOrModifyDeviceTableRecord;
+            cells.namedItem("modify_button").children[0].innerText="Commit";
         }
         function startModifyDriverTable(driver_id, driver_name, run_count) {
             document.getElementById('drvt_driver_id_input').value = driver_id;
@@ -173,7 +183,7 @@
         function collectValues(rows, field_name) {
             var map = new Map();
             for (let i = 0; i < rows.length; i++) {
-                const value = getFieldValue(rows[i], field_name);
+                const value = getFieldValue(rows[i], field_name).toLowerCase();
                 const existingArray = map.get(value);
                 if (existingArray === undefined) {
                     map.set(value, [ i ]);
@@ -321,13 +331,26 @@
             //
             // [driver_table] Check that all driver IDs exist in the run table
             //
-            var dt_drivers = collectValues(driver_table_rows, 'driver_id');
-            dt_drivers.forEach((dt_rows,dt_driver_id,m) => {
-                if (run_drivers.get(dt_driver_id) === undefined) {
-                    for (let i = 0; i < dt_rows.length; i++) {
-                        driver_table_rows[dt_rows[i]].children.namedItem('driver_id').classList.add('error_cell');
-                        logTableError('driver_table_errors', "ERROR_11: driver_id [" + dt_driver_id + "] was found in {driver_table}, but not in {run_table}");
+            var drvt_drivers = collectValues(driver_table_rows, 'driver_id');
+            drvt_drivers.forEach((drvt_rows,drvt_driver_id,m) => {
+                if (run_drivers.get(drvt_driver_id) === undefined) {
+                    for (let i = 0; i < drvt_rows.length; i++) {
+                        driver_table_rows[drvt_rows[i]].children.namedItem('driver_id').classList.add('error_cell');
+                        logTableError('driver_table_errors', "ERROR_11: driver_id [" + drvt_driver_id + "] was found in {driver_table}, but not in {run_table}");
                     }
+                }
+            });
+            //
+            // [driver_table] Check that there are no duplicate names
+            //
+            var drvt_driver_names = collectValues(driver_table_rows, 'driver_name');
+            drvt_driver_names.forEach((drvt_rows,drvt_driver_name,m) => {
+                if (drvt_rows.length > 1)
+                {
+                    for (let i = 0; i < drvt_rows.length; i++) {
+                        driver_table_rows[drvt_rows[i]].children.namedItem('driver_name').classList.add('error_cell');
+                    }
+                    logTableError('driver_table_errors', "ERROR_12: driver_name [" + drvt_driver_name + "] was found more than once in {driver_table}")
                 }
             });
         }
@@ -347,21 +370,21 @@
         <tr class="column_name">
             <td>mac_address</td>
             <td>device_id</td>
-            <td>add/remove</td>
-            <td>modify</td>
+            <td>add/modify</td>
+            <td>remove</td>
         </tr>
     {% for item in devices %}
-        <tr name="device_table_row">
+        <tr name="device_table_row" id="device_table_row_{{item.mac_address}}">
             <td name="mac_address">{{ item.mac_address }}</td>
             <td name="device_id" style="text-align: right;">{{ item.device_id }}</td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyDeviceTable('{{item.mac_address}}','{{item.device_id}}')">Modify</button></td>
             <td><button class="button" type="button" onclick="removeRecordFromDeviceTable('{{item.mac_address}}')">Remove</button></td>
-            <td><button class="button" type="button" onclick="startModifyDeviceTable('{{item.mac_address}}','{{item.device_id}}')">Copy Below</button></td>
         </tr>
     {% endfor %}
         <tr>
-            <td><input class="text-input" type="text" id="dt_mac_address_input" size="20"></td>
-            <td><input class="text-input" type="text" id="dt_device_id_input" size="5"></td>
-            <td><button class="button" type="button" onclick="addOrModifyDeviceTableRecord()">Add/Modify</button></td>
+            <td><input id="dt_mac_address_input" class="text-input" type="text" size="20"></td>
+            <td><input id="dt_device_id_input" class="text-input" type="text" size="5"></td>
+            <td><button class="button" type="button" onclick="addOrModifyDeviceTableRecord()">Add</button></td>
         </tr>
     </table>
     <div id="device_table_errors" style="font-family:monospace"></div>
@@ -372,16 +395,16 @@
             <td>driver_id</td>
             <td>driver_name</td>
             <td>run_count</td>
-            <td>add/remove</td>
-            <td>modify</td>
+            <td>add/modify</td>
+            <td>remove</td>
         </tr>
         {% for item in drivers %}
         <tr name="driver_table_row">
             <td name="driver_id">{{ item.driver_id }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="run_count">{{ item.run_count }}</td>
-            <td><button class="button" type="button" onclick="removeRecordFromDriverTable('{{item.driver_id}}')">Remove</button></td>
             <td><button class="button" type="button" onclick="startModifyDriverTable('{{item.driver_id}}','{{item.driver_name}}','{{item.run_count}}')">Copy Below</button></td>
+            <td><button class="button" type="button" onclick="removeRecordFromDriverTable('{{item.driver_id}}')">Remove</button></td>
         </tr>
         {% endfor %}
         <tr>
@@ -399,16 +422,16 @@
             <td>car_id</td>
             <td>car_description</td>
             <td>car_owner</td>
-            <td>add/remove</td>
-            <td>modify</td>
+            <td>add/modify</td>
+            <td>remove</td>
         </tr>
         {% for item in cars %}
         <tr name="car_table_row">
             <td name="car_id">{{ item.car_id }}</td>
             <td name="car_description">{{ item.car_description }}</td>
             <td name="car_owner">{{ item.car_owner }}</td>
-            <td><button class="button" type="button" onclick="removeRecordFromCarTable('{{item.car_id}}')">Remove</button></td>
             <td><button class="button" type="button" onclick="startModifyCarTable('{{item.car_id}}','{{item.car_description}}','{{item.car_owner}}')">Copy Below</button></td>
+            <td><button class="button" type="button" onclick="removeRecordFromCarTable('{{item.car_id}}')">Remove</button></td>
         </tr>
         {% endfor %}
         <tr>
@@ -425,15 +448,15 @@
     <tr class="column_name">
         <td>device_id</td>
         <td>car_id</td>
-        <td>add/remove</td>
-        <td>modify</td>
+        <td>add/modify</td>
+        <td>remove</td>
     </tr>
         {% for item in device_assignments %}
         <tr name="device_assignment_table_row">
             <td name="device_id">{{ item.device_id }}</td>
             <td name="car_id">{{ item.car_id }}</td>
-            <td><button class="button" type="button" onclick="removeRecordFromDeviceAssignmentTable('{{item.device_id}}')">Remove</button></td>
             <td><button class="button" type="button" onclick="startModifyDeviceAssigmentTable('{{item.device_id}}','{{item.car_id}}')">Copy Below</button></td>
+            <td><button class="button" type="button" onclick="removeRecordFromDeviceAssignmentTable('{{item.device_id}}')">Remove</button></td>
     </tr>
     {% endfor %}
     <tr>
@@ -459,8 +482,8 @@
         <td>laser_top_speed</td>
         <td>top_speed</td>
         <td>datafile_path</td>
-        <td>add/remove</td>
-        <td>modify</td>
+        <td>add/modify</td>
+        <td>remove</td>
 </tr>
     {% for item in runs %}
     <tr name="run_table_row">
@@ -476,13 +499,13 @@
         <td name="laser_top_speed">{{ item.laser_top_speed }}</td>
         <td style="color:darkorange" name="top_speed">{{ item.top_speed }}</td>
         <td name="datafile_path">{{ item.datafile_path }}</td>
-        <td><button class="button" type="button" onclick="removeRecordFromRunTable('{{item.result_id}}')">Remove</button></td>
         <td><button class="button" type="button" onclick="startModifyRunTable(
             '{{item.result_id}}','{{item.heat}}','{{item.run}}','{{item.driver_id}}','{{item.car_id}}','{{item.device_id}}',
             '{{item.gps_speed_timestamp}}','{{item.gps_top_speed}}','{{item.laser_speed_timestamp}}','{{item.laser_top_speed}}',
             '{{item.top_speed}}','{{item.datafile_path}}'
         )
         ">Copy Below</button></td>
+        <td><button class="button" type="button" onclick="removeRecordFromRunTable('{{item.result_id}}')">Remove</button></td>
     </tr>
     {% endfor %}
     <tr>
