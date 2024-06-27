@@ -71,6 +71,11 @@
                 location.reload(true);
             });
         }
+        function emptyRunTable() {
+            if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!\nIt will then generate an inital schedule of runs based on driver and car information")) {
+                postAndReload("populate_run_table", "");
+            }
+        }
         function moveInputField(cells, input_name, field_name, field_value) {
             const input_field = document.getElementById(input_name);
             input_field.value = field_value;
@@ -121,6 +126,16 @@
             moveInputField(cells, "rt_top_speed_input", "top_speed", top_speed);
             moveInputField(cells, "rt_datafile_path_input", "datafile_path", datafile_path);
         }
+        function startModifyExtendedResultsTable(result_id,time_to_60,time_to_100,time_to_150,time_to_200,time_to_top_speed,speed_at_finish) {
+            const cells = changeModifyButtonToCommitButton("extended_results_table_row_" + result_id, addOrModifyExtendedResultsTableRecord);
+            moveInputField(cells, "ert_result_id_input",        "result_id", result_id);
+            moveInputField(cells, "ert_time_to_60_input",       "time_to_60", time_to_60);
+            moveInputField(cells, "ert_time_to_100_input",      "time_to_100", time_to_100);
+            moveInputField(cells, "ert_time_to_150_input",      "time_to_150", time_to_150);
+            moveInputField(cells, "ert_time_to_200_input",      "time_to_200", time_to_200);
+            moveInputField(cells, "ert_time_to_top_speed_input","time_to_top_speed", time_to_top_speed);
+            moveInputField(cells, "ert_speed_at_finish_input",  "speed_at_finish", speed_at_finish);
+        }
         function removeRecordFromDeviceTable(mac_address) {
             postAndReload("remove_device_table_record", "" + mac_address);
         }
@@ -135,6 +150,9 @@
         }
         function removeRecordFromRunTable(result_id) {
             postAndReload("remove_run_table_record", "" + result_id);
+        }
+        function removeRecordFromExtendedResultsTable(result_id) {
+            postAndReload("remove_extended_results_table_record", "" + result_id);
         }
         function addOrModifyDeviceTableRecord() {
             const mac_address = document.getElementById('dt_mac_address_input').value;
@@ -186,6 +204,25 @@
                 laser_top_speed + "," +
                 top_speed + "," +
                 datafile_path);
+        }
+        function addOrModifyExtendedResultsTableRecord() {
+            const result_id = document.getElementById('ert_result_id_input').value;
+            const time_to_60 = document.getElementById('ert_time_to_60_input').value;
+            const time_to_100 = document.getElementById('ert_time_to_100_input').value;
+            const time_to_150 = document.getElementById('ert_time_to_150_input').value;
+            const time_to_200 = document.getElementById('ert_time_to_200_input').value;
+            const time_to_top_speed = document.getElementById('ert_time_to_top_speed_input').value;
+            const speed_at_finish = document.getElementById('ert_speed_at_finish_input').value;
+            postAndReload("add_extended_results_table_record", 
+                "" + 
+                result_id + "," + 
+                time_to_60 + "," + 
+                time_to_100 + "," + 
+                time_to_150 + "," + 
+                time_to_200 + "," + 
+                time_to_top_speed + "," + 
+                speed_at_finish
+            );
         }
         // returns a Map mapping from field values to an Array of rows with that value
         function collectValues(rows, field_name) {
@@ -476,6 +513,7 @@
 <div id="device_assignment_table_errors" style="font-family:monospace"></div>
 <!-------------------------------------------------------->
 <h3 class="table_title">run_table</h3>
+<button class="button" type="button" onclick="emptyRunTable()">Recreate Inital Table</button>
 <table style="font-family:monospace">
     <tr class="column_name">
         <td>result_id</td>
@@ -533,6 +571,48 @@
     </tr>
 </table>
 <div id="run_table_errors" style="font-family:monospace"></div>
+<!-------------------------------------------------------->
+<h3 class="table_title">extended_results_table</h3>
+<table style="font-family:monospace">
+    <tr class="column_name">
+        <td>result_id</td>
+        <td>time_to_60</td>
+        <td>time_to_100</td>
+        <td>time_to_150</td>
+        <td>time_to_200</td>
+        <td>time_to_top_speed</td>
+        <td>speed_at_finish</td>
+        <td>add/modify</td>
+        <td>remove</td>
+    </tr>
+        {% for item in extended_results %}
+        <tr name="extended_results_table_row" id="extended_results_table_row_{{item.device_id}}">
+            <td name="result_id">{{ item.result_id }}</td>
+            <td name="time_to_60">{{ item.time_to_60 }}</td>
+            <td name="time_to_100">{{ item.time_to_100 }}</td>
+            <td name="time_to_150">{{ item.time_to_150 }}</td>
+            <td name="time_to_200">{{ item.time_to_200 }}</td>
+            <td name="time_to_top_speed">{{ item.time_to_top_speed }}</td>
+            <td name="speed_at_finish">{{ item.speed_at_finish }}</td>
+            <!-- todo -->
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyExtendedResultsTable(
+                '{{item.result_id}}','{{item.time_to_60}}','{{item.time_to_100}}','{{item.time_to_150}}','{{item.time_to_200}}','{{item.time_to_top_speed}}','{{item.speed_at_finish}}')">
+                Modify</button></td>
+            <td><button class="button" type="button" onclick="removeRecordFromExtendedResultsTable('{{item.result_id}}')">Remove</button></td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <td><input class="text-input" type="text" id="ert_result_id_input" size="4"></td>
+        <td><input class="text-input" type="text" id="ert_time_to_60_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ert_time_to_100_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ert_time_to_150_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ert_time_to_200_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ert_time_to_top_speed_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ert_speed_at_finish_input" size="10"></td>
+        <td><button class="button" type="button" onclick="addOrModifyExtendedResultsTableRecord()">Add</button></td>
+    </tr>
+</table>
+<div id="extended_results_table_errors" style="font-family:monospace"></div>
 <!-------------------------------------------------------->
 <div id="message_console" style="font-family:monospace"></div>
 

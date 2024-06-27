@@ -36,6 +36,8 @@ class DriverTable(db.Model):
     driver_id = db.Column(db.Integer, primary_key=True)
     driver_name = db.Column(db.Text, nullable=False)
     run_count = db.Column(db.Integer, nullable=False)
+    def __repr__(self):
+        return f"<Driver {self.driver_id} {self.driver_name} {self.run_count}>"
 
 class CarTable(db.Model):
     __tablename__ = 'car_table'
@@ -71,6 +73,19 @@ class RunTable(db.Model):
 
     def __repr__(self):
         return f"<Run {self.result_id}>"
+    
+class ExtendedResultsTable(db.Model):
+    __tablename__ = 'extended_results_table'
+    result_id = db.Column(db.Integer, primary_key=True)
+    time_to_60 = db.Column(db.Float, nullable=False)
+    time_to_100 = db.Column(db.Float, nullable=False)
+    time_to_150 = db.Column(db.Float, nullable=False)
+    time_to_200 = db.Column(db.Float, nullable=False)
+    time_to_top_speed = db.Column(db.Float, nullable=False)
+    speed_at_finish = db.Column(db.Float, nullable=False)
+
+    def __repr__(self):
+        return f"<ExtendedResult {self.result_id}>"
 
 # ------------------------------------------------------------
 # /
@@ -165,6 +180,19 @@ def raw_tables():
         )
         .all()
     )
+    extended_results = (
+        ExtendedResultsTable.query
+        .with_entities(
+            ExtendedResultsTable.result_id,
+            ExtendedResultsTable.time_to_60,
+            ExtendedResultsTable.time_to_100,
+            ExtendedResultsTable.time_to_150,
+            ExtendedResultsTable.time_to_200,
+            ExtendedResultsTable.time_to_top_speed,
+            ExtendedResultsTable.speed_at_finish,
+        )
+        .all()
+    )
     print("    query done\n")
     print(runs)
     return render_template(
@@ -174,6 +202,7 @@ def raw_tables():
         cars=cars,
         device_assignments=device_assignments,
         runs=runs,
+        extended_results=extended_results,
     )
 
 # ------------------------------------------------------------
@@ -500,6 +529,143 @@ def add_run_table_record():
         print("MODIFY RECORD COMPLETE")
     
     return jsonify({"message": "run_table updated"}), 200
+# ------------------------------------------------------------
+# /remove_extended_results_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{result_id}}
+@app.route("/remove_extended_results_table_record", methods=["POST"])
+def remove_extended_results_table_record():
+    data = request.get_data(as_text=True)
+    print(f"remove_extended_results_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 
+
+    result_id = data.strip()
+    ExtendedResultsTable.query.filter_by(result_id = result_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": "extended_results_table updated"}), 200
+
+# ------------------------------------------------------------
+# /add_extended_results_table_record
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST {{result_id}},{{time_to_60}},{{time_to_100}},{{time_to_150}},{{time_to_200}},{{time_to_top_speed}},{{speed_at_finish}}
+@app.route("/add_extended_results_table_record", methods=["POST"])
+def add_extended_results_table_record():
+    data = request.get_data(as_text=True)
+    print(f"add_extended_results_table_record: {data}\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+
+    result_id = values[0].strip()
+    time_to_60 = values[1].strip()
+    time_to_100 = values[2].strip()
+    time_to_150 = values[3].strip()
+    time_to_200 = values[4].strip()
+    time_to_top_speed = values[5].strip()
+    speed_at_finish = values[6].strip()
+
+    results = ExtendedResultsTable.query.filter_by(result_id = result_id)
+    if (results.count() == 0):
+        result = ExtendedResultsTable(
+            result_id = result_id,
+            time_to_60 = time_to_60,
+            time_to_100 = time_to_100,
+            time_to_150 = time_to_150,
+            time_to_200 = time_to_200,
+            time_to_top_speed = time_to_top_speed,
+            speed_at_finish = speed_at_finish,
+        )
+        db.session.add(result)
+        db.session.commit()
+    else:
+        print(f"MODIFY RECORD {results.first().result_id}")
+        results.first().time_to_60 = time_to_60
+        results.first().time_to_100 = time_to_100
+        results.first().time_to_150 = time_to_150
+        results.first().time_to_200 = time_to_200
+        results.first().time_to_top_speed = time_to_top_speed
+        results.first().speed_at_finish = speed_at_finish
+        db.session.commit()
+        print("MODIFY RECORD COMPLETE")
+    
+    return jsonify({"message": "extended_results_table updated"}), 200
+# ------------------------------------------------------------
+# /empty_run_table
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST 
+@app.route("/empty_run_table", methods=["POST"])
+def empty_run_table():
+    print("EMPTY RUN TABLE")
+    RunTable.query.delete()
+    db.session.commit()
+    return jsonify({"message": "run table emptied"}), 200
+# ------------------------------------------------------------
+# /populate_run_table
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST 
+@app.route("/populate_run_table", methods=["POST"])
+def populate_run_table():
+    RunTable.query.delete()
+    db.session.commit()
+
+    result_id = 0
+    heat = 1
+    run = 1
+    device_id = 0
+    gps_speed_timestamp = "--"
+    gps_top_speed = 0.0
+    laser_speed_timestamp = "--"
+    laser_top_speed = 0.0
+    top_speed = 0.0
+    datafile_path = "--"
+    drivers = DriverTable.query.all()
+    for driver in drivers:
+        run_count = driver.run_count
+        driver_name = driver.driver_name
+        driver_id = driver.driver_id
+        print(f"....driver {driver_name} gets {run_count} runs")
+        matching_cars = CarTable.query.filter(CarTable.car_owner == driver_name).all()
+        print(f"....found {len(matching_cars)} matching cars")
+        car_id = 0
+        if (len(matching_cars) == 1):
+            car_id = matching_cars[0].car_id
+        for index in range(run_count):
+            result = RunTable(
+                result_id = result_id,
+                heat = heat,
+                run = run,
+                driver_id = driver_id,
+                car_id = car_id,
+                device_id = device_id,
+                gps_speed_timestamp = gps_speed_timestamp,
+                gps_top_speed = gps_top_speed,
+                laser_speed_timestamp = laser_speed_timestamp,
+                laser_top_speed = laser_top_speed,
+                top_speed = top_speed,
+                datafile_path = datafile_path
+            )
+            result_id += 1
+            run += 1
+            if (run >= 9):
+                heat += 1
+                run = 1
+
+            db.session.add(result)
+
+    db.session.commit()
+    return jsonify({"message": "run table emptied"}), 200
 # ------------------------------------------------------------
 # /upload_run_result
 # ------------------------------------------------------------
