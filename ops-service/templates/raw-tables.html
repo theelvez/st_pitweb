@@ -71,47 +71,55 @@
                 location.reload(true);
             });
         }
-        function startModifyDeviceTable(mac_address, device_id) {
-            const cells = document.getElementById("device_table_row_" + mac_address).children;
-            const mac_address_input= document.getElementById('dt_mac_address_input');
-            const device_id_input = document.getElementById('dt_device_id_input');
-            mac_address_input.value = mac_address;
-            device_id_input.value = device_id;
-
-            cells.namedItem("mac_address").innerHTML = "";
-            cells.namedItem("device_id").innerHTML = "";
-            cells.namedItem("mac_address").appendChild(mac_address_input);
-            cells.namedItem("device_id").appendChild(device_id_input);
-            cells.namedItem("modify_button").children[0].onclick= addOrModifyDeviceTableRecord;
+        function moveInputField(cells, input_name, field_name, field_value) {
+            const input_field = document.getElementById(input_name);
+            input_field.value = field_value;
+            const dest = cells.namedItem(field_name);
+            dest.innerHTML = "";
+            dest.appendChild(input_field);
+        }
+        function changeModifyButtonToCommitButton(row_name, modify_function) {
+            const cells = document.getElementById(row_name).children;
+            cells.namedItem("modify_button").children[0].onclick= modify_function;
             cells.namedItem("modify_button").children[0].innerText="Commit";
+            return cells;
+        }
+        function startModifyDeviceTable(mac_address, device_id) {
+            const cells = changeModifyButtonToCommitButton("device_table_row_" + mac_address, addOrModifyDeviceTableRecord);
+            moveInputField(cells, "dt_mac_address_input", "mac_address", mac_address);
+            moveInputField(cells, "dt_device_id_input", "device_id", device_id);
         }
         function startModifyDriverTable(driver_id, driver_name, run_count) {
-            document.getElementById('drvt_driver_id_input').value = driver_id;
-            document.getElementById('drvt_driver_name_input').value = driver_name;
-            document.getElementById('drvt_run_count_input').value = run_count;
+            const cells = changeModifyButtonToCommitButton("driver_table_row_" + driver_id, addOrModifyDriverTableRecord);
+            moveInputField(cells, "drvt_driver_id_input", "driver_id", driver_id);
+            moveInputField(cells, "drvt_driver_name_input", "driver_name", driver_name);
+            moveInputField(cells, "drvt_run_count_input", "run_count", run_count);
         }
         function startModifyCarTable(car_id,car_description,car_owner) {
-            document.getElementById('ct_car_id_input').value = car_id;
-            document.getElementById('ct_car_description_input').value = car_description;
-            document.getElementById('ct_car_owner_input').value = car_owner;
+            const cells = changeModifyButtonToCommitButton("car_table_row_" + car_id, addOrModifyCarTableRecord);
+            moveInputField(cells, "ct_car_id_input", "car_id", car_id);
+            moveInputField(cells, "ct_car_description_input", "car_description", car_description);
+            moveInputField(cells, "ct_car_owner_input", "car_owner", car_owner);
         }
         function startModifyDeviceAssigmentTable(device_id,car_id) {
-            document.getElementById('dat_device_id_input').value = device_id;
-            document.getElementById('dat_car_id_input').value = car_id;
+            const cells = changeModifyButtonToCommitButton("device_assignment_table_row_" + device_id, addOrModifyDeviceAssignmentTableRecord);
+            moveInputField(cells, "dat_device_id_input", "device_id", device_id);
+            moveInputField(cells, "dat_car_id_input", "car_id", car_id);
         }
         function startModifyRunTable(result_id,heat,run,driver_id,car_id,device_id,gps_speed_timestamp,gps_top_speed,laser_speed_timestamp,laser_top_speed,top_speed,datafile_path) {
-            document.getElementById('rt_result_id_input').value = result_id;
-            document.getElementById('rt_heat_input').value = heat;
-            document.getElementById('rt_run_input').value = run;
-            document.getElementById('rt_driver_id_input').value = driver_id;
-            document.getElementById('rt_car_id_input').value = car_id;
-            document.getElementById('rt_device_id_input').value = device_id;
-            document.getElementById('rt_gps_speed_timestamp_input').value = gps_speed_timestamp;
-            document.getElementById('rt_gps_top_speed_input').value = gps_top_speed;
-            document.getElementById('rt_laser_speed_timestamp_input').value = laser_speed_timestamp;
-            document.getElementById('rt_laser_top_speed_input').value = laser_top_speed;
-            document.getElementById('rt_top_speed_input').value = top_speed;
-            document.getElementById('rt_datafile_path_input').value = datafile_path;
+            const cells = changeModifyButtonToCommitButton("run_table_row_" + result_id, addOrModifyRunTableRecord);
+            moveInputField(cells, "rt_result_id_input", "result_id", result_id);
+            moveInputField(cells, "rt_heat_input", "heat", heat);
+            moveInputField(cells, "rt_run_input", "run", run);
+            moveInputField(cells, "rt_driver_id_input", "driver_id", driver_id);
+            moveInputField(cells, "rt_car_id_input", "car_id", car_id);
+            moveInputField(cells, "rt_device_id_input", "device_id", device_id);
+            moveInputField(cells, "rt_gps_speed_timestamp_input", "gps_speed_timestamp", gps_speed_timestamp);
+            moveInputField(cells, "rt_gps_top_speed_input", "gps_top_speed", gps_top_speed);
+            moveInputField(cells, "rt_laser_speed_timestamp_input", "laser_speed_timestamp", laser_speed_timestamp);
+            moveInputField(cells, "rt_laser_top_speed_input", "laser_top_speed", laser_top_speed);
+            moveInputField(cells, "rt_top_speed_input", "top_speed", top_speed);
+            moveInputField(cells, "rt_datafile_path_input", "datafile_path", datafile_path);
         }
         function removeRecordFromDeviceTable(mac_address) {
             postAndReload("remove_device_table_record", "" + mac_address);
@@ -399,11 +407,11 @@
             <td>remove</td>
         </tr>
         {% for item in drivers %}
-        <tr name="driver_table_row">
+        <tr name="driver_table_row" id="driver_table_row_{{item.driver_id}}">
             <td name="driver_id">{{ item.driver_id }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="run_count">{{ item.run_count }}</td>
-            <td><button class="button" type="button" onclick="startModifyDriverTable('{{item.driver_id}}','{{item.driver_name}}','{{item.run_count}}')">Copy Below</button></td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyDriverTable('{{item.driver_id}}','{{item.driver_name}}','{{item.run_count}}')">Modify</button></td>
             <td><button class="button" type="button" onclick="removeRecordFromDriverTable('{{item.driver_id}}')">Remove</button></td>
         </tr>
         {% endfor %}
@@ -411,7 +419,7 @@
             <td><input class="text-input" type="text" id="drvt_driver_id_input" size="3"></td>
             <td><input class="text-input" type="text" id="drvt_driver_name_input" size="30"></td>
             <td><input class="text-input" type="text" id="drvt_run_count_input" size="3"></td>
-            <td><button class="button" type="button" onclick="addOrModifyDriverTableRecord()">Add/Modify</button></td>
+            <td><button class="button" type="button" onclick="addOrModifyDriverTableRecord()">Add</button></td>
         </tr>
     </table>
     <div id="driver_table_errors" style="font-family:monospace"></div>
@@ -426,11 +434,11 @@
             <td>remove</td>
         </tr>
         {% for item in cars %}
-        <tr name="car_table_row">
+        <tr name="car_table_row" id="car_table_row_{{item.car_id}}">
             <td name="car_id">{{ item.car_id }}</td>
             <td name="car_description">{{ item.car_description }}</td>
             <td name="car_owner">{{ item.car_owner }}</td>
-            <td><button class="button" type="button" onclick="startModifyCarTable('{{item.car_id}}','{{item.car_description}}','{{item.car_owner}}')">Copy Below</button></td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyCarTable('{{item.car_id}}','{{item.car_description}}','{{item.car_owner}}')">Modify</button></td>
             <td><button class="button" type="button" onclick="removeRecordFromCarTable('{{item.car_id}}')">Remove</button></td>
         </tr>
         {% endfor %}
@@ -438,7 +446,7 @@
             <td><input class="text-input" type="text" id="ct_car_id_input" size="3"></td>
             <td><input class="text-input" type="text" id="ct_car_description_input" size="30"></td>
             <td><input class="text-input" type="text" id="ct_car_owner_input" size="30"></td>
-            <td><button class="button" type="button" onclick="addOrModifyCarTableRecord()">Add/Modify</button></td>
+            <td><button class="button" type="button" onclick="addOrModifyCarTableRecord()">Add</button></td>
         </tr>
     </table>
     <div id="car_table_errors" style="font-family:monospace"></div>
@@ -452,17 +460,17 @@
         <td>remove</td>
     </tr>
         {% for item in device_assignments %}
-        <tr name="device_assignment_table_row">
+        <tr name="device_assignment_table_row" id="device_assignment_table_row_{{item.device_id}}">
             <td name="device_id">{{ item.device_id }}</td>
             <td name="car_id">{{ item.car_id }}</td>
-            <td><button class="button" type="button" onclick="startModifyDeviceAssigmentTable('{{item.device_id}}','{{item.car_id}}')">Copy Below</button></td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyDeviceAssigmentTable('{{item.device_id}}','{{item.car_id}}')">Modify</button></td>
             <td><button class="button" type="button" onclick="removeRecordFromDeviceAssignmentTable('{{item.device_id}}')">Remove</button></td>
     </tr>
     {% endfor %}
     <tr>
         <td><input class="text-input" type="text" id="dat_device_id_input" size="3"></td>
         <td><input class="text-input" type="text" id="dat_car_id_input" size="3"></td>
-        <td><button class="button" type="button" onclick="addOrModifyDeviceAssignmentTableRecord()">Add/Modify</button></td>
+        <td><button class="button" type="button" onclick="addOrModifyDeviceAssignmentTableRecord()">Add</button></td>
     </tr>
 </table>
 <div id="device_assignment_table_errors" style="font-family:monospace"></div>
@@ -486,7 +494,7 @@
         <td>remove</td>
 </tr>
     {% for item in runs %}
-    <tr name="run_table_row">
+    <tr name="run_table_row" id="run_table_row_{{item.result_id}}">
         <td name="result_id">{{ item.result_id }}</td>
         <td name="heat">{{ item.heat }}</td>
         <td name="run">{{ item.run }}</td>
@@ -499,12 +507,12 @@
         <td name="laser_top_speed">{{ item.laser_top_speed }}</td>
         <td style="color:darkorange" name="top_speed">{{ item.top_speed }}</td>
         <td name="datafile_path">{{ item.datafile_path }}</td>
-        <td><button class="button" type="button" onclick="startModifyRunTable(
+        <td name="modify_button"><button class="button" type="button" onclick="startModifyRunTable(
             '{{item.result_id}}','{{item.heat}}','{{item.run}}','{{item.driver_id}}','{{item.car_id}}','{{item.device_id}}',
             '{{item.gps_speed_timestamp}}','{{item.gps_top_speed}}','{{item.laser_speed_timestamp}}','{{item.laser_top_speed}}',
             '{{item.top_speed}}','{{item.datafile_path}}'
         )
-        ">Copy Below</button></td>
+        ">Modify</button></td>
         <td><button class="button" type="button" onclick="removeRecordFromRunTable('{{item.result_id}}')">Remove</button></td>
     </tr>
     {% endfor %}
@@ -521,7 +529,7 @@
         <td><input class="text-input" type="text" id="rt_laser_top_speed_input" size="10"></td>
         <td><input class="text-input" type="text" id="rt_top_speed_input" size="10"></td>
         <td><input class="text-input" type="text" id="rt_datafile_path_input" size="40"></td>
-        <td><button class="button" type="button" onclick="addOrModifyRunTableRecord()">Add/Modify</button></td>
+        <td><button class="button" type="button" onclick="addOrModifyRunTableRecord()">Add</button></td>
     </tr>
 </table>
 <div id="run_table_errors" style="font-family:monospace"></div>

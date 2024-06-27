@@ -114,7 +114,7 @@ def schedule():
 def raw_tables():
     print("raw_tables:\n")
     devices = (
-        DeviceTable.query
+        DeviceTable.query.order_by(DeviceTable.device_id)
         .with_entities(
             DeviceTable.mac_address, 
             DeviceTable.device_id
