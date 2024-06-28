@@ -618,12 +618,24 @@ def empty_run_table():
 @app.route("/populate_run_table", methods=["POST"])
 def populate_run_table():
     RunTable.query.delete()
+    DeviceAssignmentTable.query.delete()
     db.session.commit()
 
+    #
+    # Car -> Device mapping: start with car_id == device_id
+    # 
+    cars = CarTable.query.all()
+    for car in cars:
+        db.session.add(DeviceAssignmentTable(car_id = car.car_id, device_id = car.car_id))
+
+    #
+    # Runs
+    #   Give drivers one entry per run using their owned car as the car, unless they have more than one car
+    #   Device id == car id
+    #
     result_id = 0
     heat = 1
     run = 1
-    device_id = 0
     gps_speed_timestamp = "--"
     gps_top_speed = 0.0
     laser_speed_timestamp = "--"
@@ -642,13 +654,13 @@ def populate_run_table():
         if (len(matching_cars) == 1):
             car_id = matching_cars[0].car_id
         for index in range(run_count):
-            result = RunTable(
+            new_record = RunTable(
                 result_id = result_id,
                 heat = heat,
                 run = run,
                 driver_id = driver_id,
                 car_id = car_id,
-                device_id = device_id,
+                device_id = car_id,
                 gps_speed_timestamp = gps_speed_timestamp,
                 gps_top_speed = gps_top_speed,
                 laser_speed_timestamp = laser_speed_timestamp,
@@ -662,10 +674,44 @@ def populate_run_table():
                 heat += 1
                 run = 1
 
-            db.session.add(result)
+            db.session.add(new_record)
 
     db.session.commit()
     return jsonify({"message": "run table emptied"}), 200
+# ------------------------------------------------------------
+# /move_run_from_to
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST from_heat,from_run,to_heat,to_run
+@app.route("/move_run_from_to", methods=["POST"])
+def move_run_from_to():
+    print("move_run_from_to: ")
+    data = request.get_data(as_text=True)
+    print(data)
+    print("\n")
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    values = data.split(",")
+    print(values)
+    # Save the data to the database
+    from_heat = values[0].strip()
+    from_run = values[1].strip()
+    to_heat = values[2].strip()
+    to_run = values[3].strip()
+
+    run_to_modify = RunTable.query.filter(RunTable.heat == from_heat, RunTable.run == from_run).first()
+
+    run_to_modify.heat = to_heat
+    run_to_modify.run = to_run
+
+    db.session.commit()
+    message = f"run moved from {from_heat}-{from_run} to {to_heat}-{to_run}"
+    print(message)
+    return jsonify({"message": message}), 200
+
+
 # ------------------------------------------------------------
 # /upload_run_result
 # ------------------------------------------------------------

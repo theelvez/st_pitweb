@@ -30,10 +30,32 @@
             background-color: #BD7878;
             color: black;
         }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
     </style>
     <script>
+        function logTableError(which, message) {
+            document.getElementById(which).innerText += message 
+            document.getElementById(which).innerHTML += "<br>"
+        }
+
         function runValidationChecks() {
             const rows = document.getElementsByName('schedule_row');
+
 
             //
             // Check that the same driver isn't listed more than once in a given heat
@@ -54,12 +76,15 @@
                     heat_map.get(heat).set(driver_id, curr);
                 }
             }
-            console.log(heat_map);
+            //console.log(heat_map);
             heat_map.forEach((driver_map, h_key, h_map) => {
                 driver_map.forEach((row_list, d_key, d_map) => {
                     const heat = h_key;
                     const driver_id = d_key;
                     if (row_list.length > 1) {
+                        var dn = rows[row_list[0]].children.namedItem('driver_name')
+                        logTableError("schedule_errors", "ERROR_1: driver_id #" + driver_id + ' named "'+ dn.innerText + '" has multiple runs ('
+                         + row_list.length + ") in heat #" + heat)
                         for (const row of row_list) {
                             rows[row].children.namedItem('heat').classList.add('error_cell')
                             rows[row].children.namedItem('driver_name').classList.add('error_cell')
@@ -68,6 +93,93 @@
                 })
             });
 
+            //
+            // Highlight cars with "TBD" or "TBC" in their description
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const car_description = rows[i].children.namedItem('car_description')
+                const cd = car_description.innerText.toLowerCase();
+                if (cd.includes("tbd") || cd.includes("tbc")) {
+                    car_description.classList.add('error_cell')
+                    const heat = rows[i].children.namedItem('heat').innerText;
+                    const run = rows[i].children.namedItem('run').innerText;
+                    logTableError("schedule_errors", "Heat " + heat + ", run " + run + " has a TBD/TBC car description")
+                }
+            }
+
+            //
+            // Insert space between heats
+            //
+            const header = document.getElementById('schedule_view_header');
+            var curHeat = 1;
+            {
+                var newRow = document.createElement("tr");
+                newRow.innerHTML = "<td colspan=10>Heat 1</td>";
+                newRow.style.backgroundColor = "#000022"
+                header.before(newRow);
+            }
+            for (let i = 0; i < rows.length; i++) {
+                if (i == rows.length) {
+                    continue;
+                }
+                if (rows[i+1] === undefined) {
+                    continue;
+                }
+                const nextHeatElement = rows[i+1].children.namedItem('heat');
+                if (nextHeatElement === undefined) {
+                    continue;
+                }
+                const nextHeat = nextHeatElement.innerText;
+                if (curHeat != nextHeat) {
+                    var newRow = document.createElement("tr");
+                    newRow.innerHTML = "<td colspan=9>Heat " + nextHeat + "</td>";
+                    newRow.style.backgroundColor = "#000022"
+                    rows[i].after(newRow);
+                    var newHeader = document.createElement("tr");
+                    newHeader.innerHTML = header.innerHTML;
+                    newHeader.classList.add("column_name");
+                    newRow.after(newHeader);
+
+                    curHeat++;
+                }
+            }
+        }
+        function postAndReload(path, body) {
+            fetch("http://localhost/" + path, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+                //logMessage("POST response: '" + json + "'");
+                location.reload(true);
+            });
+        }
+        function parse_heat_run_string(heat_run_string) {
+            var values = heat_run_string.replaceAll(',','-').replaceAll(' ','-').split("-")
+            console.log(values)
+            if (values.length != 2) {
+                return undefined;
+            }
+            if (isNaN(parseInt(values[0])) ||
+                isNaN(parseInt(values[1]))) {
+                return undefined;
+            }
+
+            return values;
+        }
+        function moveRun(from_heat,from_run) {
+            var to_string = document.getElementById("move_to_input_" + from_heat + "-" + from_run).value
+            var values = parse_heat_run_string(to_string);
+            if (values === undefined) {
+                window.alert("Error: '" + to_string + "' isn't a valid format for heat and run.  Please use the 'heat-run' format")
+                return;
+            }
+            var to_heat = values[0];
+            var to_run = values[1];
+
+            postAndReload("move_run_from_to", "" + from_heat + "," + from_run + "," + to_string)
         }
     </script>
     <link rel="shortcut icon" href="../static/logo.png">
@@ -83,7 +195,7 @@
 <!-------------------------------------------------------->
     <h3 class="table_title">Schedule</h3>
     <table id="schedule_view" style="font-family:monospace">
-        <tr class="column_name">
+        <tr id="schedule_view_header" class="column_name">
             <!--schedule-->
             <td>heat</td>
             <td>run</td>
@@ -98,9 +210,11 @@
             <td>car_id</td>
             <!--result-->
             <td>top_speed</td>
+            <!-- schedule -->
+            <td>move to</td>
         </tr>
     {% for item in schedule %}
-        <tr name="schedule_row">
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
             <td name="heat">{{ item.heat }}</td>
             <td name="run">{{ item.run }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
@@ -110,8 +224,10 @@
             <td name="car_description">{{ item.car_description }}</td>
             <td name="car_id">{{ item.car_id }}</td>
             <td name="top_speed">{{ item.top_speed }}</td>
+            <td><input class="text-input" type="text" id="move_to_input_{{item.heat}}-{{item.run}}" size="5"><button class="button" type="button" onclick="moveRun({{item.heat}},{{item.run}})">Move</button></td>
         </tr>
     {% endfor %}
     </table>
+    <div id="schedule_errors" style="font-family:monospace"></div>
 </body>
 </html>
