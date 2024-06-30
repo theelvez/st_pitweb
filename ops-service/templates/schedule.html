@@ -12,7 +12,7 @@
         a:link { color: #B4DCFE; }
         a:visited { color: #749DD5; }
         th,td {
-            padding: 10px ;
+            padding: 2px ;
         }
         tr {
             background-color: #2f2f2f;
@@ -132,7 +132,7 @@
                 const nextHeat = nextHeatElement.innerText;
                 if (curHeat != nextHeat) {
                     var newRow = document.createElement("tr");
-                    newRow.innerHTML = "<td colspan=9>Heat " + nextHeat + "</td>";
+                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + "</td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].after(newRow);
                     var newHeader = document.createElement("tr");
@@ -179,7 +179,12 @@
             var to_heat = values[0];
             var to_run = values[1];
 
-            postAndReload("move_run_from_to", "" + from_heat + "," + from_run + "," + to_string)
+            postAndReload("move_run_from_to", "" + from_heat + "," + from_run + "," + to_heat + "," + to_run)
+        }
+        function emptyRunTable() {
+            if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!\nIt will then generate an inital schedule of runs based on driver and car information")) {
+                postAndReload("populate_run_table", "");
+            }
         }
     </script>
     <link rel="shortcut icon" href="../static/logo.png">
@@ -194,6 +199,7 @@
     <h1>SVTdF Schedule View</h1>
 <!-------------------------------------------------------->
     <h3 class="table_title">Schedule</h3>
+    <button class="button" type="button" onclick="emptyRunTable()">Recreate Inital Table</button>
     <table id="schedule_view" style="font-family:monospace">
         <tr id="schedule_view_header" class="column_name">
             <!--schedule-->

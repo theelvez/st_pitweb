@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import desc, distinct
+from sqlalchemy import desc, distinct, or_
 import csv
 
 app = Flask(__name__)
@@ -17,6 +17,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 
 db = SQLAlchemy(app)
+
+runs_per_heat = 8
 
 print("ops-service starting...\n")
 
@@ -609,6 +611,25 @@ def empty_run_table():
     RunTable.query.delete()
     db.session.commit()
     return jsonify({"message": "run table emptied"}), 200
+
+def find_next_available_heat(driver_id, car_id, heat, max_heat):
+    next_run = 1
+    while heat <= max_heat:
+        next_run = RunTable.query.filter_by(heat = heat).count()
+        if next_run < runs_per_heat:
+            if RunTable.query.filter(RunTable.heat == heat, or_(RunTable.driver_id == driver_id, RunTable.car_id == car_id)).count() > 0:
+                heat += 1
+                continue
+            else: 
+                break
+        else:
+            heat += 1
+
+    return [ heat, next_run ]
+
+def find_next_run_in_heat(heat):
+    run = 1
+    return run
 # ------------------------------------------------------------
 # /populate_run_table
 # ------------------------------------------------------------
@@ -617,6 +638,9 @@ def empty_run_table():
 #   POST 
 @app.route("/populate_run_table", methods=["POST"])
 def populate_run_table():
+    #
+    # DELETE run_table and device_assignment_table
+    #
     RunTable.query.delete()
     DeviceAssignmentTable.query.delete()
     db.session.commit()
@@ -642,22 +666,37 @@ def populate_run_table():
     laser_top_speed = 0.0
     top_speed = 0.0
     datafile_path = "--"
-    drivers = DriverTable.query.all()
+    drivers = DriverTable.query.order_by(desc(DriverTable.run_count), DriverTable.driver_id).all()
+
+    total_run_count = 0
     for driver in drivers:
-        run_count = driver.run_count
+        total_run_count += driver.run_count
+
+    max_heat = int(total_run_count / runs_per_heat) + 1
+
+    print("------------------------")
+    print(f"scheduling {total_run_count} runs in {max_heat} heats")
+
+    for driver in drivers:
+        driver_run_count = driver.run_count
         driver_name = driver.driver_name
         driver_id = driver.driver_id
-        print(f"....driver {driver_name} gets {run_count} runs")
+        print(f"....driver {driver_name} gets {driver_run_count} runs")
         matching_cars = CarTable.query.filter(CarTable.car_owner == driver_name).all()
         print(f"....found {len(matching_cars)} matching cars")
         car_id = 0
         if (len(matching_cars) == 1):
             car_id = matching_cars[0].car_id
-        for index in range(run_count):
+
+        heat = 1
+        for index in range(driver_run_count):
+            heat_and_run = find_next_available_heat(driver_id, car_id, heat, max_heat)
+            #run = find_next_run_in_heat(heat)
+
             new_record = RunTable(
                 result_id = result_id,
-                heat = heat,
-                run = run,
+                heat = heat_and_run[0],
+                run = heat_and_run[1],
                 driver_id = driver_id,
                 car_id = car_id,
                 device_id = car_id,
@@ -669,15 +708,10 @@ def populate_run_table():
                 datafile_path = datafile_path
             )
             result_id += 1
-            run += 1
-            if (run >= 9):
-                heat += 1
-                run = 1
-
             db.session.add(new_record)
-
+    print("------------------------")
     db.session.commit()
-    return jsonify({"message": "run table emptied"}), 200
+    return jsonify({"message": "run table populated"}), 200
 # ------------------------------------------------------------
 # /move_run_from_to
 # ------------------------------------------------------------
