@@ -46,16 +46,46 @@
         .text-input {
             font-family: monospace;
         }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
     </style>
     <script>
         function logTableError(which, message) {
             document.getElementById(which).innerText += message 
             document.getElementById(which).innerHTML += "<br>"
         }
+        function getClassForRunCount(runCount) {
+            const maxRunCount = 8;
+            if (runCount > maxRunCount) {
+                return "too-many-runs";
+            } else if (runCount < maxRunCount) {
+                return "run-count-low";
+            }
+            return "run-count-ok";
+        }
 
         function runValidationChecks() {
             const rows = document.getElementsByName('schedule_row');
 
+            //
+            // Count runs in each heat
+            //
+            var heat_run_count = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const heat = parseInt(rows[i].children.namedItem('heat').innerText);
+                if (!heat_run_count.has(heat)) {
+                    heat_run_count.set(heat, 0);
+                }
+                var cur_count = heat_run_count.get(heat);
+                heat_run_count.set(heat, cur_count + 1);
+            }
 
             //
             // Check that the same driver isn't listed more than once in a given heat
@@ -94,16 +124,16 @@
             });
 
             //
-            // Highlight cars with "TBD" or "TBC" in their description
+            // Highlight cars with "TBD" or "TBC" or "UNKNOWN" in their description
             //
             for (let i = 0; i < rows.length; i++) {
                 const car_description = rows[i].children.namedItem('car_description')
                 const cd = car_description.innerText.toLowerCase();
-                if (cd.includes("tbd") || cd.includes("tbc")) {
+                if (cd.includes("tbd") || cd.includes("tbc") || cd.includes("unknown")) {
                     car_description.classList.add('error_cell')
                     const heat = rows[i].children.namedItem('heat').innerText;
                     const run = rows[i].children.namedItem('run').innerText;
-                    logTableError("schedule_errors", "Heat " + heat + ", run " + run + " has a TBD/TBC car description")
+                    logTableError("schedule_errors", "Heat " + heat + ", run " + run + " has a TBD/TBC/UNKNOWN car description")
                 }
             }
 
@@ -114,7 +144,8 @@
             var curHeat = 1;
             {
                 var newRow = document.createElement("tr");
-                newRow.innerHTML = "<td colspan=10>Heat 1</td>";
+                var runCount = heat_run_count.get(1);
+                newRow.innerHTML = "<td colspan=10>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span></td>";
                 newRow.style.backgroundColor = "#000022"
                 header.before(newRow);
             }
@@ -132,7 +163,8 @@
                 const nextHeat = nextHeatElement.innerText;
                 if (curHeat != nextHeat) {
                     var newRow = document.createElement("tr");
-                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + "</td>";
+                    var runCount = heat_run_count.get(parseInt(nextHeat));
+                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span></td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].after(newRow);
                     var newHeader = document.createElement("tr");

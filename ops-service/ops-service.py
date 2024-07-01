@@ -612,20 +612,23 @@ def empty_run_table():
     db.session.commit()
     return jsonify({"message": "run table emptied"}), 200
 
-def find_next_available_heat(driver_id, car_id, heat, max_heat):
+def find_next_available_heat(driver_id, car_id, next_unfull_heat, max_heat):
     next_run = 1
+    heat = next_unfull_heat[0] # passed as the fist element of an array so it's by-reference
     while heat <= max_heat:
-        next_run = RunTable.query.filter_by(heat = heat).count()
-        if next_run < runs_per_heat:
+        next_run = RunTable.query.filter_by(heat = heat).count() + 1
+        if next_run <= runs_per_heat:
             if RunTable.query.filter(RunTable.heat == heat, or_(RunTable.driver_id == driver_id, RunTable.car_id == car_id)).count() > 0:
                 heat += 1
                 continue
             else: 
                 break
         else:
+            # heat filled up, remember this 
+            next_unfull_heat[0] = next_unfull_heat[0] + 1
             heat += 1
 
-    return [ heat, next_run ]
+    return heat, next_run
 
 def find_next_run_in_heat(heat):
     run = 1
@@ -646,6 +649,20 @@ def populate_run_table():
     db.session.commit()
 
     #
+    # VALIDATE that we have sentiel values and add them, if they don't exist
+    #
+    if CarTable.query.filter_by(car_id = 0).count() <= 0:
+        db.session.add(CarTable(car_id = 0, car_description = "UNKNOWN", car_owner = "None"))
+
+    if DriverTable.query.filter_by(driver_id = 0).count() <= 0:
+        db.session.add(DriverTable(driver_id = 0, driver_name = "UNKNOWN", run_count = 0))
+
+    if DeviceTable.query.filter_by(device_id = 0).count() <= 0:
+        db.session.add(DeviceTable(mac_address = "UNKNOWN", device_id = 0))
+
+    db.session.commit()
+    
+    #
     # Car -> Device mapping: start with car_id == device_id
     # 
     cars = CarTable.query.all()
@@ -658,8 +675,6 @@ def populate_run_table():
     #   Device id == car id
     #
     result_id = 0
-    heat = 1
-    run = 1
     gps_speed_timestamp = "--"
     gps_top_speed = 0.0
     laser_speed_timestamp = "--"
@@ -677,6 +692,7 @@ def populate_run_table():
     print("------------------------")
     print(f"scheduling {total_run_count} runs in {max_heat} heats")
 
+    next_unfull_heat = [ 1 ]
     for driver in drivers:
         driver_run_count = driver.run_count
         driver_name = driver.driver_name
@@ -688,15 +704,13 @@ def populate_run_table():
         if (len(matching_cars) == 1):
             car_id = matching_cars[0].car_id
 
-        heat = 1
         for index in range(driver_run_count):
-            heat_and_run = find_next_available_heat(driver_id, car_id, heat, max_heat)
-            #run = find_next_run_in_heat(heat)
+            heat, run = find_next_available_heat(driver_id, car_id, next_unfull_heat, max_heat)
 
             new_record = RunTable(
                 result_id = result_id,
-                heat = heat_and_run[0],
-                run = heat_and_run[1],
+                heat = heat,
+                run = run,
                 driver_id = driver_id,
                 car_id = car_id,
                 device_id = car_id,
@@ -712,6 +726,15 @@ def populate_run_table():
     print("------------------------")
     db.session.commit()
     return jsonify({"message": "run table populated"}), 200
+
+def renumber_runs_in_heat(heat):
+    runs = RunTable.query.filter(RunTable.heat == heat).order_by(RunTable.run).all()
+    run_number = 1
+    for run in runs:
+        run.run = run_number
+        run_number += 1
+    return
+
 # ------------------------------------------------------------
 # /move_run_from_to
 # ------------------------------------------------------------
@@ -735,6 +758,15 @@ def move_run_from_to():
     to_heat = values[2].strip()
     to_run = values[3].strip()
 
+    # make room for the run in the to_heat
+    to_runs = RunTable.query.filter(RunTable.heat == to_heat).order_by(RunTable.run).all()
+    run_number = 1
+    for run in to_runs:
+        if run_number >= int(to_run):
+            run.run = run_number + 1
+        run_number += 1
+    db.session.commit()
+
     run_to_modify = RunTable.query.filter(RunTable.heat == from_heat, RunTable.run == from_run).first()
 
     run_to_modify.heat = to_heat
@@ -743,6 +775,12 @@ def move_run_from_to():
     db.session.commit()
     message = f"run moved from {from_heat}-{from_run} to {to_heat}-{to_run}"
     print(message)
+
+    # renumber the runs in from_heat and to_heat
+    renumber_runs_in_heat(from_heat)
+    renumber_runs_in_heat(to_heat)
+    db.session.commit()
+
     return jsonify({"message": message}), 200
 
 
