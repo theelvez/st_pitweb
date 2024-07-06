@@ -1,9 +1,14 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
+from flask_sse import sse
 from sqlalchemy import desc, distinct, or_
+from time import sleep, ctime, time
+from threading import Event
 import csv
 
 app = Flask(__name__)
+
+db_update_event = Event()
 
 # SQLite database configuration
 DB_NAME = "SVTdF-2024.sqlite"  # Replace with your SQLite database file name
@@ -88,6 +93,15 @@ class ExtendedResultsTable(db.Model):
 
     def __repr__(self):
         return f"<ExtendedResult {self.result_id}>"
+    
+class UnscheduledDriver:
+    def __init__(self, driver_id, driver_name, scheduled_run_count, paid_run_count):
+        self.driver_id = driver_id
+        self.driver_name = driver_name
+        self.scheduled_run_count = scheduled_run_count
+        self.paid_run_count = paid_run_count
+    def __repr__(self):
+        return f"<({self.driver_id}) {self.driver_name} s:{self.scheduled_run_count} p:{self.paid_run_count}>"
 
 # ------------------------------------------------------------
 # /
@@ -95,6 +109,23 @@ class ExtendedResultsTable(db.Model):
 @app.route("/")
 def home():
     return render_template("home.html")
+
+def find_unscheduled_drivers():
+    unscheduled_drivers = []
+
+    drivers = DriverTable.query.all()
+    for driver in drivers:
+        num_runs_scheduled = RunTable.query.filter_by(driver_id = driver.driver_id).count()
+        num_runs_paid = driver.run_count
+        if (num_runs_paid != num_runs_scheduled):
+            new_entry = UnscheduledDriver(
+                driver_id = driver.driver_id,
+                driver_name = driver.driver_name,
+                scheduled_run_count = num_runs_scheduled,
+                paid_run_count = num_runs_paid
+            )
+            unscheduled_drivers.append(new_entry)
+    return unscheduled_drivers
 
 # ------------------------------------------------------------
 # /
@@ -108,6 +139,7 @@ def schedule():
     ).join(
         DriverTable, DriverTable.driver_id == RunTable.driver_id
     ).with_entities(
+        RunTable.result_id,
         RunTable.heat,
         RunTable.run,
         RunTable.car_id,
@@ -118,11 +150,30 @@ def schedule():
         DeviceAssignmentTable.car_id.label('device_in_car'),
         CarTable.car_description
     )
-    #print(schedule)
     
+    cars = CarTable.query.order_by(CarTable.car_description).join(
+        DeviceAssignmentTable, CarTable.car_id == DeviceAssignmentTable.car_id
+    ).with_entities(
+        CarTable.car_id,
+        CarTable.car_description,
+        DeviceAssignmentTable.car_id.label('device_in_car')
+    )
+
+    unscheduled_drivers = find_unscheduled_drivers()
+
+    next_result_id = 1
+    for run in RunTable.query.all():
+        next_result_id = max(next_result_id, run.result_id)
+
+    next_result_id += 1
+
     return render_template(
         "schedule.html",
-        schedule=schedule.all())
+        schedule = schedule.all(),
+        cars = cars.all(),
+        unscheduled_drivers = unscheduled_drivers,
+        next_result_id = next_result_id
+        )
 
 # ------------------------------------------------------------
 # /raw-tables
@@ -165,7 +216,7 @@ def raw_tables():
         .all()
     )
     runs = (
-        RunTable.query
+        RunTable.query.order_by(RunTable.heat, RunTable.run)
         .with_entities(
             RunTable.result_id,
             RunTable.heat,
@@ -224,6 +275,7 @@ def remove_device_table_record():
     DeviceTable.query.filter_by(mac_address = mac_address).delete()
     db.session.commit()
 
+    db_update_event.set()
     return jsonify({"message": "device_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -264,6 +316,7 @@ def add_device_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    db_update_event.set()
     return jsonify({"message": "device_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -283,6 +336,7 @@ def remove_driver_table_record():
     DriverTable.query.filter_by(driver_id = driver_id).delete()
     db.session.commit()
 
+    db_update_event.set()
     return jsonify({"message": "driver_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -326,6 +380,7 @@ def add_driver_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    db_update_event.set()
     return jsonify({"message": "driver_table updated"}), 200
     
 # ------------------------------------------------------------
@@ -345,6 +400,7 @@ def remove_car_table_record():
     CarTable.query.filter_by(car_id = car_id).delete()
     db.session.commit()
 
+    db_update_event.set()
     return jsonify({"message": "car_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -388,6 +444,7 @@ def add_car_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    db_update_event.set()
     return jsonify({"message": "car_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -407,6 +464,7 @@ def remove_device_assignment_table_record():
     DeviceAssignmentTable.query.filter_by(device_id = device_id).delete()
     db.session.commit()
 
+    db_update_event.set()
     return jsonify({"message": "device_assignment_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -447,6 +505,7 @@ def add_device_assignment_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    db_update_event.set()
     return jsonify({"message": "device_assignment_table updated"}), 200
 # ------------------------------------------------------------
 # /remove_run_table_record
@@ -465,6 +524,7 @@ def remove_run_table_record():
     RunTable.query.filter_by(result_id = result_id).delete()
     db.session.commit()
 
+    db_update_event.set()
     return jsonify({"message": "run_table updated"}), 200
 
 # ------------------------------------------------------------
@@ -500,8 +560,8 @@ def add_run_table_record():
     if (results.count() == 0):
         result = RunTable(
             result_id = result_id,
-            heat = heat,
-            run = run,
+            heat = 999,
+            run = 888,
             driver_id = driver_id,
             car_id = car_id,
             device_id = device_id,
@@ -515,9 +575,10 @@ def add_run_table_record():
         db.session.add(result)
         db.session.commit()
     else:
-        print(f"MODIFY RECORD {results.first().result_id}")
-        results.first().heat = heat
-        results.first().run = run
+        result_id = results.first().result_id
+        print(f"MODIFY RECORD {result_id}")
+        results.first().heat = 999
+        results.first().run = 888
         results.first().driver_id = driver_id
         results.first().car_id = car_id
         results.first().device_id = device_id
@@ -530,6 +591,9 @@ def add_run_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    do_move_run_to(result_id, heat, run)
+
+    db_update_event.set()
     return jsonify({"message": "run_table updated"}), 200
 # ------------------------------------------------------------
 # /remove_extended_results_table_record
@@ -547,6 +611,7 @@ def remove_extended_results_table_record():
     result_id = data.strip()
     ExtendedResultsTable.query.filter_by(result_id = result_id).delete()
     db.session.commit()
+    db_update_event.set()
 
     return jsonify({"message": "extended_results_table updated"}), 200
 
@@ -598,6 +663,7 @@ def add_extended_results_table_record():
         db.session.commit()
         print("MODIFY RECORD COMPLETE")
     
+    db_update_event.set()
     return jsonify({"message": "extended_results_table updated"}), 200
 # ------------------------------------------------------------
 # /empty_run_table
@@ -605,42 +671,16 @@ def add_extended_results_table_record():
 # Expected format:
 #   [Content-Type: text/plain]
 #   POST 
+# @app.route("/empty_run_table", methods=["POST"])
+# def empty_run_table():
+#     print("EMPTY RUN TABLE")
+#     RunTable.query.delete()
+#     db.session.commit()
+#     db_update_event.set()
+#     return jsonify({"message": "run table emptied"}), 200
+
 @app.route("/empty_run_table", methods=["POST"])
 def empty_run_table():
-    print("EMPTY RUN TABLE")
-    RunTable.query.delete()
-    db.session.commit()
-    return jsonify({"message": "run table emptied"}), 200
-
-def find_next_available_heat(driver_id, car_id, next_unfull_heat, max_heat):
-    next_run = 1
-    heat = next_unfull_heat[0] # passed as the fist element of an array so it's by-reference
-    while heat <= max_heat:
-        next_run = RunTable.query.filter_by(heat = heat).count() + 1
-        if next_run <= runs_per_heat:
-            if RunTable.query.filter(RunTable.heat == heat, or_(RunTable.driver_id == driver_id, RunTable.car_id == car_id)).count() > 0:
-                heat += 1
-                continue
-            else: 
-                break
-        else:
-            # heat filled up, remember this 
-            next_unfull_heat[0] = next_unfull_heat[0] + 1
-            heat += 1
-
-    return heat, next_run
-
-def find_next_run_in_heat(heat):
-    run = 1
-    return run
-# ------------------------------------------------------------
-# /populate_run_table
-# ------------------------------------------------------------
-# Expected format:
-#   [Content-Type: text/plain]
-#   POST 
-@app.route("/populate_run_table", methods=["POST"])
-def populate_run_table():
     #
     # DELETE run_table and device_assignment_table
     #
@@ -668,13 +708,43 @@ def populate_run_table():
     cars = CarTable.query.all()
     for car in cars:
         db.session.add(DeviceAssignmentTable(car_id = car.car_id, device_id = car.car_id))
+    
+    db.session.commit()
+    db_update_event.set()
+    return jsonify({"message": "run table emptied"}), 200
 
+def find_next_available_heat(driver_id, car_id, next_unfull_heat, max_heat):
+    next_run = 1
+    heat = next_unfull_heat[0] # passed as the fist element of an array so it's by-reference
+    while heat <= max_heat:
+        next_run = RunTable.query.filter_by(heat = heat).count() + 1
+        if next_run <= runs_per_heat:
+            if RunTable.query.filter(RunTable.heat == heat, or_(RunTable.driver_id == driver_id, RunTable.car_id == car_id)).count() > 0:
+                heat += 1
+                continue
+            else: 
+                break
+        else:
+            # heat filled up, remember this 
+            next_unfull_heat[0] = next_unfull_heat[0] + 1
+            heat += 1
+
+    return heat, next_run
+
+# ------------------------------------------------------------
+# /populate_run_table
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST 
+@app.route("/populate_run_table", methods=["POST"])
+def populate_run_table():
     #
     # Runs
     #   Give drivers one entry per run using their owned car as the car, unless they have more than one car
     #   Device id == car id
     #
-    result_id = 0
+    result_id = RunTable.query.order_by(desc(RunTable.result_id)).first().result_id + 1
     gps_speed_timestamp = "--"
     gps_top_speed = 0.0
     laser_speed_timestamp = "--"
@@ -692,12 +762,14 @@ def populate_run_table():
     print("------------------------")
     print(f"scheduling {total_run_count} runs in {max_heat} heats")
 
+    unscheduled_drivers = find_unscheduled_drivers()
+
     next_unfull_heat = [ 1 ]
-    for driver in drivers:
-        driver_run_count = driver.run_count
+    for driver in unscheduled_drivers:
+        driver_run_count = driver.paid_run_count - driver.scheduled_run_count
         driver_name = driver.driver_name
         driver_id = driver.driver_id
-        print(f"....driver {driver_name} gets {driver_run_count} runs")
+        print(f"....driver {driver_name} gets {driver_run_count} more runs")
         matching_cars = CarTable.query.filter(CarTable.car_owner == driver_name).all()
         print(f"....found {len(matching_cars)} matching cars")
         car_id = 0
@@ -725,6 +797,7 @@ def populate_run_table():
             db.session.add(new_record)
     print("------------------------")
     db.session.commit()
+    db_update_event.set()
     return jsonify({"message": "run table populated"}), 200
 
 def renumber_runs_in_heat(heat):
@@ -735,12 +808,47 @@ def renumber_runs_in_heat(heat):
         run_number += 1
     return
 
+def do_move_run_to(result_id, to_heat, to_run):
+
+    if (to_run == "0" and to_heat == "0"):
+        run_to_delete = RunTable.query.filter(RunTable.result_id == result_id)
+        from_heat = run_to_delete.first().heat
+        run_to_delete.delete()
+        db.session.commit()
+        renumber_runs_in_heat(from_heat)
+        db.session.commit()
+        return "run removed"
+
+    # make room for the run in the to_heat
+    to_runs = RunTable.query.filter(RunTable.heat == to_heat).order_by(RunTable.run).all()
+    run_number = 1
+    for run in to_runs:
+        if run_number >= int(to_run):
+            run.run = run_number + 1
+        run_number += 1
+    db.session.commit()
+
+    run_to_modify = RunTable.query.filter(RunTable.result_id == result_id).first()
+    from_heat = run_to_modify.heat
+    run_to_modify.heat = to_heat
+    run_to_modify.run = to_run
+
+    db.session.commit()
+
+    # renumber the runs in from_heat and to_heat
+    renumber_runs_in_heat(from_heat)
+    renumber_runs_in_heat(to_heat)
+    db.session.commit()
+    db_update_event.set()
+    return f"run {result_id} moved to {to_heat}-{to_run}"
+
+
 # ------------------------------------------------------------
 # /move_run_from_to
 # ------------------------------------------------------------
 # Expected format:
 #   [Content-Type: text/plain]
-#   POST from_heat,from_run,to_heat,to_run
+#   POST result_id,to_heat,to_run
 @app.route("/move_run_from_to", methods=["POST"])
 def move_run_from_to():
     print("move_run_from_to: ")
@@ -753,34 +861,14 @@ def move_run_from_to():
     values = data.split(",")
     print(values)
     # Save the data to the database
-    from_heat = values[0].strip()
-    from_run = values[1].strip()
-    to_heat = values[2].strip()
-    to_run = values[3].strip()
+    result_id = values[0].strip()
+    to_heat = values[1].strip()
+    to_run = values[2].strip()
 
-    # make room for the run in the to_heat
-    to_runs = RunTable.query.filter(RunTable.heat == to_heat).order_by(RunTable.run).all()
-    run_number = 1
-    for run in to_runs:
-        if run_number >= int(to_run):
-            run.run = run_number + 1
-        run_number += 1
-    db.session.commit()
+    message = do_move_run_to(result_id, to_heat, to_run)
 
-    run_to_modify = RunTable.query.filter(RunTable.heat == from_heat, RunTable.run == from_run).first()
-
-    run_to_modify.heat = to_heat
-    run_to_modify.run = to_run
-
-    db.session.commit()
-    message = f"run moved from {from_heat}-{from_run} to {to_heat}-{to_run}"
+    db_update_event.set()
     print(message)
-
-    # renumber the runs in from_heat and to_heat
-    renumber_runs_in_heat(from_heat)
-    renumber_runs_in_heat(to_heat)
-    db.session.commit()
-
     return jsonify({"message": message}), 200
 
 
@@ -833,9 +921,13 @@ def upload_run_result():
         return jsonify({"message": f"error, couldn't find device_id of '{device_id}' in RunTable"}), 400
 
     result_id = run_table_row.result_id
-    driver_name = run_table_row.driver_name
+    car_id = run_table_row.car_id
     heat = run_table_row.heat
     run = run_table_row.run
+
+    run_table_row.gps_top_speed = gps_top_speed
+    run_table_row.top_speed = gps_top_speed
+    db.session.commit()
 
     print("-------")
     print(f"mac_address: {mac_address}")
@@ -844,10 +936,12 @@ def upload_run_result():
     print(f"car_id: {car_id}")
     print(f"car_description: {car_description}")
     print(f"result_id: {result_id}")
-    print(f"driver_name: {driver_name}")
+    print(f"car_id: {car_id}")
     print(f"heat: {heat}")
     print(f"run: {run}")
     print("-------")
+
+    db_update_event.set()
 
     # Save the race result
     # result = RaceResult(
@@ -861,8 +955,25 @@ def upload_run_result():
     # db.session.commit()
     return jsonify({"message": "Data received"}), 200
 
+
+def get_message():
+    '''this could be any function that blocks until data is ready'''
+    db_update_event.wait()
+    db_update_event.clear()
+    s = ctime(time())
+    return s
+
+@app.route('/stream')
+def stream():
+    def eventStream():
+        while True:
+            # wait for source data to be available, then push it
+            yield 'data: {}\n\n'.format(get_message())
+    return Response(eventStream(), mimetype="text/event-stream")
+
+
 # ------------------------------------------------------------
 # main
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80, debug=True)
+    app.run(host="0.0.0.0", port=80, debug=True, threaded=True)

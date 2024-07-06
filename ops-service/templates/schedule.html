@@ -7,12 +7,12 @@
             background-color: #1F1F1F;
             color: #CCCCCC;
             font-family: sans-serif;
-            font-size: larger;
+            font-size: medium;
         }
         a:link { color: #B4DCFE; }
         a:visited { color: #749DD5; }
         th,td {
-            padding: 2px ;
+            padding: 1px ;
         }
         tr {
             background-color: #2f2f2f;
@@ -55,6 +55,28 @@
         .run-count-low {
             color: yellow;
         }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 900px
+        }
+        .right {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 900px
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
     </style>
     <script>
         function logTableError(which, message) {
@@ -72,6 +94,14 @@
         }
 
         function runValidationChecks() {
+
+            var targetContainer = document.getElementById("target_div");
+            var eventSource = new EventSource("/stream")
+            eventSource.onmessage = function(e) {
+                targetContainer.innerHTML = e.data;
+                location.reload(true);
+            };        
+
             const rows = document.getElementsByName('schedule_row');
 
             //
@@ -118,6 +148,42 @@
                         for (const row of row_list) {
                             rows[row].children.namedItem('heat').classList.add('error_cell')
                             rows[row].children.namedItem('driver_name').classList.add('error_cell')
+                        }
+                    }
+                })
+            });
+
+            //
+            // Check that the same car isn't listed more than once in a given heat
+            //
+            // map(heat -> map(car_id -> array(rows)))
+            var car_heat_map = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const car_id = rows[i].children.namedItem('car_id').innerText;
+                const heat = rows[i].children.namedItem('heat').innerText;
+                if (car_heat_map.get(heat) === undefined) {
+                    car_heat_map.set(heat, new Map());
+                }
+                var curr = car_heat_map.get(heat).get(car_id);
+                if (curr === undefined) {
+                    car_heat_map.get(heat).set(car_id, [i]);
+                } else {
+                    curr.push(i);
+                    car_heat_map.get(heat).set(car_id, curr);
+                }
+            }
+            //console.log(car_heat_map);
+            car_heat_map.forEach((car_map, h_key, h_map) => {
+                car_map.forEach((row_list, d_key, d_map) => {
+                    const heat = h_key;
+                    const car_id = d_key;
+                    if (row_list.length > 1) {
+                        var dn = rows[row_list[0]].children.namedItem('car_description')
+                        logTableError("schedule_errors", "ERROR_2: car_id #" + car_id + ' named "'+ dn.innerText + '" has multiple runs ('
+                         + row_list.length + ") in heat #" + heat)
+                        for (const row of row_list) {
+                            rows[row].children.namedItem('heat').classList.add('error_cell')
+                            rows[row].children.namedItem('car_id').classList.add('error_cell')
                         }
                     }
                 })
@@ -201,7 +267,8 @@
 
             return values;
         }
-        function moveRun(from_heat,from_run) {
+        function moveRun(result_id,from_heat,from_run) {
+            //window.alert("moveRun(" + result_id + "," + from_heat + "," + from_run + ")")
             var to_string = document.getElementById("move_to_input_" + from_heat + "-" + from_run).value
             var values = parse_heat_run_string(to_string);
             if (values === undefined) {
@@ -211,12 +278,56 @@
             var to_heat = values[0];
             var to_run = values[1];
 
-            postAndReload("move_run_from_to", "" + from_heat + "," + from_run + "," + to_heat + "," + to_run)
+            postAndReload("move_run_from_to", "" + result_id + "," + to_heat + "," + to_run)
+        }
+        function removeRun(result_id) {
+            postAndReload("move_run_from_to", "" + result_id + ",0,0");
         }
         function emptyRunTable() {
             if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!\nIt will then generate an inital schedule of runs based on driver and car information")) {
-                postAndReload("populate_run_table", "");
+                postAndReload("empty_run_table", "");
             }
+        }
+        function autoScheduleRemaining() {
+            postAndReload("populate_run_table", "");
+        }
+        function addRun(result_id, driver_id, car_select_name, heat_run_input) {
+            car_id_device_id = document.getElementById(car_select_name).value.split(',');
+            car_id = car_id_device_id[0];
+            device_id = car_id_device_id[1];
+            heat_run_string = document.getElementById(heat_run_input).value;
+            var heat_run = parse_heat_run_string(heat_run_string);
+            if (heat_run === undefined) {
+                window.alert("Error: '" + heat_run_string + "' isn't a valid format for heat and run.  Please use the 'heat-run' format");
+                return;
+            }
+            var to_heat = heat_run[0];
+            var to_run = heat_run[1];
+            //window.alert("addRun: result_id=", + result_id + ", driver_id=" + driver_id + ", car_id=" + car_id + ", device_id=" + device_id + ", heat=" + to_heat + ", run=" + to_run);
+
+            var gps_speed_timestamp = "--";
+            var gps_top_speed = 0.0;
+            var laser_speed_timestamp = "--";
+            var laser_top_speed = 0.0;
+            var top_speed = 0.0;
+            var datafile_path = "--";
+
+            //var result_id = 999;
+
+            postAndReload("add_run_table_record",
+                "" +
+                result_id + "," +
+                to_heat + "," +
+                to_run + "," +
+                driver_id + "," +
+                car_id + "," +
+                device_id + "," +
+                gps_speed_timestamp + "," +
+                gps_top_speed + "," +
+                laser_speed_timestamp + "," +
+                laser_top_speed + "," +
+                top_speed + "," +
+                datafile_path);
         }
     </script>
     <link rel="shortcut icon" href="../static/logo.png">
@@ -230,8 +341,12 @@
 </ul>
     <h1>SVTdF Schedule View</h1>
 <!-------------------------------------------------------->
+<div id="target_div">Watch this space...</div>
+<div class="SxS">
+<div class="column left">
     <h3 class="table_title">Schedule</h3>
-    <button class="button" type="button" onclick="emptyRunTable()">Recreate Inital Table</button>
+    <button class="button" type="button" onclick="emptyRunTable()">Delete Schedule</button>
+    <button class="button" type="button" onclick="autoScheduleRemaining()">Auto-Schedule Remaining Runs</button>
     <table id="schedule_view" style="font-family:monospace">
         <tr id="schedule_view_header" class="column_name">
             <!--schedule-->
@@ -241,11 +356,11 @@
             <td>driver_name</td>
             <td>drv_id</td>
             <!--device-->
-            <td>device_id</td>
-            <td>device_in_car</td>
+            <td>dev_id</td>
+            <!--<td>device_in_car</td>-->
             <!--car-->
-            <td>car_description</td>
             <td>car_id</td>
+            <td>car_description</td>
             <!--result-->
             <td>top_speed</td>
             <!-- schedule -->
@@ -258,14 +373,48 @@
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="driver_id">{{ item.driver_id }}</td>
             <td name="device_id">{{ item.device_id }}</td>
-            <td name="device_in_car">{{ item.device_in_car }}</td>
-            <td name="car_description">{{ item.car_description }}</td>
+            <!--<td name="device_in_car">{{ item.device_in_car }}</td>-->
             <td name="car_id">{{ item.car_id }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
             <td name="top_speed">{{ item.top_speed }}</td>
-            <td><input class="text-input" type="text" id="move_to_input_{{item.heat}}-{{item.run}}" size="5"><button class="button" type="button" onclick="moveRun({{item.heat}},{{item.run}})">Move</button></td>
+            <td><input class="text-input" type="text" id="move_to_input_{{item.heat}}-{{item.run}}" size="5"><button class="button" type="button" onclick="moveRun({{item.result_id}},{{item.heat}},{{item.run}})">Move</button></td>
+            <td><button class="button" type="button" onclick="removeRun({{item.result_id}})">Remove</button></td>
         </tr>
     {% endfor %}
     </table>
     <div id="schedule_errors" style="font-family:monospace"></div>
+</div>
+<div class="column right">
+    <h3 class="table_title">Unscheduled Drivers</h3>
+    <table>
+        <table style="font-family:monospace">
+            <tr class="column_name">
+                <td>drv_id</td>
+                <td>driver_name</td>
+                <td>paid</td>
+                <td>scheduled</td>
+                <td>car</td>
+                <td>add to</td>
+            </tr>
+        {% for entry in unscheduled_drivers %}
+            <tr>
+                <td>{{entry.driver_id}}</td>
+                <td>{{entry.driver_name}}</td>
+                <td>{{entry.paid_run_count}}</td>
+                <td>{{entry.scheduled_run_count}}</td>
+                <td>
+                    <select id="car_select_driver_id_{{entry.driver_id}}">
+                        {% for car in cars %}
+                        <option value="{{car.car_id}},{{car.device_in_car}}">({{car.car_id}}) {{car.car_description}}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td><input class="text-input" type="text" id="add_to_input_{{entry.driver_id}}" size="5">
+                    <button class="button" type="button" onclick="addRun({{next_result_id}},{{entry.driver_id}},'car_select_driver_id_{{entry.driver_id}}','add_to_input_{{entry.driver_id}}')">Add Run</button></td>
+            </tr>
+        {% endfor %}    
+    </table>
+</div>
+</div>
 </body>
 </html>
