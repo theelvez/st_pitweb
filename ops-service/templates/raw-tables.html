@@ -100,9 +100,10 @@
             moveInputField(cells, "drvt_driver_name_input", "driver_name", driver_name);
             moveInputField(cells, "drvt_run_count_input", "run_count", run_count);
         }
-        function startModifyCarTable(car_id,car_description,car_owner) {
+        function startModifyCarTable(car_id,car_plate,car_description,car_owner) {
             const cells = changeModifyButtonToCommitButton("car_table_row_" + car_id, addOrModifyCarTableRecord);
             moveInputField(cells, "ct_car_id_input", "car_id", car_id);
+            moveInputField(cells, "ct_car_plate_input", "car_plate", car_plate);
             moveInputField(cells, "ct_car_description_input", "car_description", car_description);
             moveInputField(cells, "ct_car_owner_input", "car_owner", car_owner);
         }
@@ -111,7 +112,7 @@
             moveInputField(cells, "dat_device_id_input", "device_id", device_id);
             moveInputField(cells, "dat_car_id_input", "car_id", car_id);
         }
-        function startModifyRunTable(result_id,heat,run,driver_id,car_id,device_id,gps_speed_timestamp,gps_top_speed,laser_speed_timestamp,laser_top_speed,top_speed,datafile_path) {
+        function startModifyRunTable(result_id,heat,run,driver_id,car_id,device_id,laser_top_speed,top_speed,upload_id) {
             const cells = changeModifyButtonToCommitButton("run_table_row_" + result_id, addOrModifyRunTableRecord);
             moveInputField(cells, "rt_result_id_input", "result_id", result_id);
             moveInputField(cells, "rt_heat_input", "heat", heat);
@@ -119,22 +120,40 @@
             moveInputField(cells, "rt_driver_id_input", "driver_id", driver_id);
             moveInputField(cells, "rt_car_id_input", "car_id", car_id);
             moveInputField(cells, "rt_device_id_input", "device_id", device_id);
-            moveInputField(cells, "rt_gps_speed_timestamp_input", "gps_speed_timestamp", gps_speed_timestamp);
-            moveInputField(cells, "rt_gps_top_speed_input", "gps_top_speed", gps_top_speed);
-            moveInputField(cells, "rt_laser_speed_timestamp_input", "laser_speed_timestamp", laser_speed_timestamp);
             moveInputField(cells, "rt_laser_top_speed_input", "laser_top_speed", laser_top_speed);
             moveInputField(cells, "rt_top_speed_input", "top_speed", top_speed);
-            moveInputField(cells, "rt_datafile_path_input", "datafile_path", datafile_path);
+            moveInputField(cells, "rt_upload_id_input", "upload_id", upload_id);
         }
-        function startModifyExtendedResultsTable(result_id,time_to_60,time_to_100,time_to_150,time_to_200,time_to_top_speed,speed_at_finish) {
-            const cells = changeModifyButtonToCommitButton("extended_results_table_row_" + result_id, addOrModifyExtendedResultsTableRecord);
-            moveInputField(cells, "ert_result_id_input",        "result_id", result_id);
-            moveInputField(cells, "ert_time_to_60_input",       "time_to_60", time_to_60);
-            moveInputField(cells, "ert_time_to_100_input",      "time_to_100", time_to_100);
-            moveInputField(cells, "ert_time_to_150_input",      "time_to_150", time_to_150);
-            moveInputField(cells, "ert_time_to_200_input",      "time_to_200", time_to_200);
-            moveInputField(cells, "ert_time_to_top_speed_input","time_to_top_speed", time_to_top_speed);
-            moveInputField(cells, "ert_speed_at_finish_input",  "speed_at_finish", speed_at_finish);
+        function startModifyUploadTable(
+            upload_id,
+            upload_ts,
+            mac_address,
+            device_id,
+            time_to_60,
+            time_to_100,
+            time_to_150,
+            time_to_200,
+            time_to_top_speed,
+            speed_at_finish,
+            gps_top_speed,
+            result_id,
+            datafile_path
+        ) {
+            const cells = changeModifyButtonToCommitButton("upload_table_row_" + result_id, addOrModifyUploadTableRecord);
+            moveInputField(cells, "ut_upload_id_input",        "upload_id",         upload_id);
+            moveInputField(cells, "ut_upload_ts_input",        "upload_ts",         upload_ts);
+            moveInputField(cells, "ut_mac_address_input",      "mac_address",       mac_address);
+            moveInputField(cells, "ut_device_id_input",        "device_id",         device_id);
+            moveInputField(cells, "ut_time_to_60_input",       "time_to_60",        time_to_60);
+            moveInputField(cells, "ut_time_to_100_input",      "time_to_100",       time_to_100);
+            moveInputField(cells, "ut_time_to_150_input",      "time_to_150",       time_to_150);
+            moveInputField(cells, "ut_time_to_200_input",      "time_to_200",       time_to_200);
+            moveInputField(cells, "ut_time_to_top_speed_input","time_to_top_speed", time_to_top_speed);
+            moveInputField(cells, "ut_speed_at_finish_input",  "speed_at_finish",   speed_at_finish);
+            moveInputField(cells, "ut_gps_top_speed_input",    "gps_top_speed",     gps_top_speed);
+            moveInputField(cells, "ut_result_id_input",        "result_id",         result_id);
+            moveInputField(cells, "ut_datafile_path_input",    "datafile_path",     datafile_path);
+
         }
         function removeRecordFromDeviceTable(mac_address) {
             postAndReload("remove_device_table_record", "" + mac_address);
@@ -151,8 +170,8 @@
         function removeRecordFromRunTable(result_id) {
             postAndReload("remove_run_table_record", "" + result_id);
         }
-        function removeRecordFromExtendedResultsTable(result_id) {
-            postAndReload("remove_extended_results_table_record", "" + result_id);
+        function removeRecordFromUploadTable(result_id) {
+            postAndReload("remove_upload_table_record", "" + result_id);
         }
         function addOrModifyDeviceTableRecord() {
             const mac_address = document.getElementById('dt_mac_address_input').value;
@@ -167,9 +186,10 @@
         }
         function addOrModifyCarTableRecord() {
             const car_id = document.getElementById('ct_car_id_input').value;
+            const car_plate = document.getElementById('ct_car_plate_input').value;
             const car_description = document.getElementById('ct_car_description_input').value;
             const car_owner = document.getElementById('ct_car_owner_input').value;
-            postAndReload("add_car_table_record", "" + car_id + "," + car_description + "," + car_owner);
+            postAndReload("add_car_table_record", "" + car_id + "," + car_plate + "," + car_description + "," + car_owner);
         }
         function addOrModifyDeviceAssignmentTableRecord() {
             const device_id = document.getElementById('dat_device_id_input').value;
@@ -183,12 +203,9 @@
             const driver_id = document.getElementById("rt_driver_id_input").value;
             const car_id = document.getElementById("rt_car_id_input").value;
             const device_id = document.getElementById("rt_device_id_input").value;
-            const gps_speed_timestamp = document.getElementById("rt_gps_speed_timestamp_input").value;
-            const gps_top_speed = document.getElementById("rt_gps_top_speed_input").value;
-            const laser_speed_timestamp = document.getElementById("rt_laser_speed_timestamp_input").value;
             const laser_top_speed = document.getElementById("rt_laser_top_speed_input").value;
             const top_speed = document.getElementById("rt_top_speed_input").value;
-            const datafile_path = document.getElementById("rt_datafile_path_input").value;
+            const upload_id = document.getElementById("rt_upload_id_input").value;
 
             postAndReload("add_run_table_record",
                 "" +
@@ -198,30 +215,40 @@
                 driver_id + "," +
                 car_id + "," +
                 device_id + "," +
-                gps_speed_timestamp + "," +
-                gps_top_speed + "," +
-                laser_speed_timestamp + "," +
                 laser_top_speed + "," +
                 top_speed + "," +
-                datafile_path);
+                upload_id);
         }
-        function addOrModifyExtendedResultsTableRecord() {
-            const result_id = document.getElementById('ert_result_id_input').value;
-            const time_to_60 = document.getElementById('ert_time_to_60_input').value;
-            const time_to_100 = document.getElementById('ert_time_to_100_input').value;
-            const time_to_150 = document.getElementById('ert_time_to_150_input').value;
-            const time_to_200 = document.getElementById('ert_time_to_200_input').value;
-            const time_to_top_speed = document.getElementById('ert_time_to_top_speed_input').value;
-            const speed_at_finish = document.getElementById('ert_speed_at_finish_input').value;
-            postAndReload("add_extended_results_table_record", 
+        function addOrModifyUploadTableRecord() {
+            const upload_id = document.getElementById('ut_upload_id_input').value;
+            const upload_ts = document.getElementById('ut_upload_ts_input').value;
+            const mac_address = document.getElementById('ut_mac_address_input').value;
+            const device_id = document.getElementById('ut_device_id_input').value;
+            const time_to_60 = document.getElementById('ut_time_to_60_input').value;
+            const time_to_100 = document.getElementById('ut_time_to_100_input').value;
+            const time_to_150 = document.getElementById('ut_time_to_150_input').value;
+            const time_to_200 = document.getElementById('ut_time_to_200_input').value;
+            const time_to_top_speed = document.getElementById('ut_time_to_top_speed_input').value;
+            const speed_at_finish = document.getElementById('ut_speed_at_finish_input').value;
+            const gps_top_speed = document.getElementById('ut_gps_top_speed_input').value;
+            const result_id = document.getElementById('ut_result_id_input').value;
+            const datafile_path = document.getElementById('ut_datafile_path_input').value;
+
+            postAndReload("add_upload_table_record", 
                 "" + 
-                result_id + "," + 
-                time_to_60 + "," + 
-                time_to_100 + "," + 
-                time_to_150 + "," + 
-                time_to_200 + "," + 
-                time_to_top_speed + "," + 
-                speed_at_finish
+                upload_id + "," +
+                upload_ts + "," +
+                mac_address + "," +
+                device_id + "," +
+                time_to_60 + "," +
+                time_to_100 + "," +
+                time_to_150 + "," +
+                time_to_200 + "," +
+                time_to_top_speed + "," +
+                speed_at_finish + "," +
+                gps_top_speed + "," +
+                result_id + "," +
+                datafile_path
             );
         }
         // returns a Map mapping from field values to an Array of rows with that value
@@ -407,6 +434,7 @@
         <li><a href="/">Home</a></li>
         <li><a href="/raw-tables">Raw Tables View</a></li>
         <li><a href="/schedule">Schedule View</a></li>
+        <li><a href="/results">Results View</a></li>
     </ul>
     <h1>SVTdF Raw DB Tables</h1>
 <!-------------------------------------------------------->
@@ -465,6 +493,7 @@
     <table style="font-family:monospace">
         <tr class="column_name">
             <td>car_id</td>
+            <td>car_plate</td>
             <td>car_description</td>
             <td>car_owner</td>
             <td>add/modify</td>
@@ -473,14 +502,16 @@
         {% for item in cars %}
         <tr name="car_table_row" id="car_table_row_{{item.car_id}}">
             <td name="car_id">{{ item.car_id }}</td>
+            <td name="car_plate">{{ item.car_plate }}</td>
             <td name="car_description">{{ item.car_description }}</td>
             <td name="car_owner">{{ item.car_owner }}</td>
-            <td name="modify_button"><button class="button" type="button" onclick="startModifyCarTable('{{item.car_id}}','{{item.car_description}}','{{item.car_owner}}')">Modify</button></td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyCarTable('{{item.car_id}}','{{item.car_plate}}','{{item.car_description}}','{{item.car_owner}}')">Modify</button></td>
             <td><button class="button" type="button" onclick="removeRecordFromCarTable('{{item.car_id}}')">Remove</button></td>
         </tr>
         {% endfor %}
         <tr>
             <td><input class="text-input" type="text" id="ct_car_id_input" size="3"></td>
+            <td><input class="text-input" type="text" id="ct_car_plate_input" size="10"></td>
             <td><input class="text-input" type="text" id="ct_car_description_input" size="30"></td>
             <td><input class="text-input" type="text" id="ct_car_owner_input" size="30"></td>
             <td><button class="button" type="button" onclick="addOrModifyCarTableRecord()">Add</button></td>
@@ -522,12 +553,9 @@
         <td>driver_id</td>
         <td>car_id</td>
         <td>device_id</td>
-        <td>gps_speed_ts</td>
-        <td>gps_top_speed</td>
-        <td>laser_speed_ts</td>
         <td>laser_top_speed</td>
         <td>top_speed</td>
-        <td>datafile_path</td>
+        <td>upload_id</td>
         <td>add/modify</td>
         <td>remove</td>
 </tr>
@@ -539,16 +567,12 @@
         <td name="driver_id">{{ item.driver_id }}</td>
         <td name="car_id">{{ item.car_id }}</td>
         <td name="device_id">{{ item.device_id }}</td>
-        <td name="gps_speed_timestamp">{{ item.gps_speed_timestamp }}</td>
-        <td name="gps_top_speed">{{ item.gps_top_speed }}</td>
-        <td name="laser_speed_timestamp">{{ item.laser_speed_timestamp }}</td>
         <td name="laser_top_speed">{{ item.laser_top_speed }}</td>
         <td style="color:darkorange" name="top_speed">{{ item.top_speed }}</td>
-        <td name="datafile_path">{{ item.datafile_path }}</td>
+        <td name="upload_id">{{ item.upload_id }}</td>
         <td name="modify_button"><button class="button" type="button" onclick="startModifyRunTable(
             '{{item.result_id}}','{{item.heat}}','{{item.run}}','{{item.driver_id}}','{{item.car_id}}','{{item.device_id}}',
-            '{{item.gps_speed_timestamp}}','{{item.gps_top_speed}}','{{item.laser_speed_timestamp}}','{{item.laser_top_speed}}',
-            '{{item.top_speed}}','{{item.datafile_path}}'
+            '{{item.laser_top_speed}}','{{item.top_speed}}','{{item.upload_id}}'
         )
         ">Modify</button></td>
         <td><button class="button" type="button" onclick="removeRecordFromRunTable('{{item.result_id}}')">Remove</button></td>
@@ -561,55 +585,81 @@
         <td><input class="text-input" type="text" id="rt_driver_id_input" size="3"></td>
         <td><input class="text-input" type="text" id="rt_car_id_input" size="3"></td>
         <td><input class="text-input" type="text" id="rt_device_id_input" size="3"></td>
-        <td><input class="text-input" type="text" id="rt_gps_speed_timestamp_input" size="10"></td>
-        <td><input class="text-input" type="text" id="rt_gps_top_speed_input" size="10"></td>
-        <td><input class="text-input" type="text" id="rt_laser_speed_timestamp_input" size="10"></td>
         <td><input class="text-input" type="text" id="rt_laser_top_speed_input" size="10"></td>
         <td><input class="text-input" type="text" id="rt_top_speed_input" size="10"></td>
-        <td><input class="text-input" type="text" id="rt_datafile_path_input" size="40"></td>
+        <td><input class="text-input" type="text" id="rt_upload_id_input" size="3"></td>
         <td><button class="button" type="button" onclick="addOrModifyRunTableRecord()">Add</button></td>
     </tr>
 </table>
 <div id="run_table_errors" style="font-family:monospace"></div>
 <!-------------------------------------------------------->
-<h3 class="table_title">extended_results_table</h3>
+<h3 class="table_title">upload_table</h3>
 <table style="font-family:monospace">
     <tr class="column_name">
-        <td>result_id</td>
-        <td>time_to_60</td>
-        <td>time_to_100</td>
-        <td>time_to_150</td>
-        <td>time_to_200</td>
-        <td>time_to_top_speed</td>
+        <td>upload_id</td>
+        <td>upload_ts</td>
+        <td>mac_address</td>
+        <td>device_id</td>
+        <td>tt_60</td>
+        <td>tt_100</td>
+        <td>tt_150</td>
+        <td>tt_200</td>
+        <td>tt_top</td>
         <td>speed_at_finish</td>
+        <td>gps_top_speed</td>
+        <td>result_id</td>
+        <td>datafile_path</td>
         <td>add/modify</td>
         <td>remove</td>
     </tr>
-        {% for item in extended_results %}
-        <tr name="extended_results_table_row" id="extended_results_table_row_{{item.device_id}}">
-            <td name="result_id">{{ item.result_id }}</td>
+        {% for item in uploads %}
+        <tr name="upload_table_row" id="upload_table_row_{{item.upload_id}}">
+            <td name="upload_id">{{ item.upload_id }}</td>
+            <td name="upload_ts">{{ item.upload_timestamp }}</td>
+            <td name="mac_address">{{ item.mac_address }}</td>
+            <td name="device_id">{{ item.device_id }}</td>
             <td name="time_to_60">{{ item.time_to_60 }}</td>
             <td name="time_to_100">{{ item.time_to_100 }}</td>
             <td name="time_to_150">{{ item.time_to_150 }}</td>
             <td name="time_to_200">{{ item.time_to_200 }}</td>
             <td name="time_to_top_speed">{{ item.time_to_top_speed }}</td>
             <td name="speed_at_finish">{{ item.speed_at_finish }}</td>
-            <!-- todo -->
-            <td name="modify_button"><button class="button" type="button" onclick="startModifyExtendedResultsTable(
-                '{{item.result_id}}','{{item.time_to_60}}','{{item.time_to_100}}','{{item.time_to_150}}','{{item.time_to_200}}','{{item.time_to_top_speed}}','{{item.speed_at_finish}}')">
+            <td name="gps_top_speed">{{ item.gps_top_speed }}</td>
+            <td name="result_id">{{ item.result_id }}</td>
+            <td name="datafile_path">{{ item.datafile_path }}</td>
+            <td name="modify_button"><button class="button" type="button" onclick="startModifyUploadTable(
+                '{{item.upload_id}}',
+                '{{item.upload_ts}}',
+                '{{item.mac_address}}',
+                '{{item.device_id}}',
+                '{{item.time_to_60}}',
+                '{{item.time_to_100}}',
+                '{{item.time_to_150}}',
+                '{{item.time_to_200}}',
+                '{{item.time_to_top_speed}}',
+                '{{item.speed_at_finish}}',
+                '{{item.result_id}}',
+                '{{item.datafile_path}}',
+                )">
                 Modify</button></td>
-            <td><button class="button" type="button" onclick="removeRecordFromExtendedResultsTable('{{item.result_id}}')">Remove</button></td>
+            <td><button class="button" type="button" onclick="removeRecordFromUploadTable('{{item.upload_id}}')">Remove</button></td>
     </tr>
     {% endfor %}
     <tr>
-        <td><input class="text-input" type="text" id="ert_result_id_input" size="4"></td>
-        <td><input class="text-input" type="text" id="ert_time_to_60_input" size="10"></td>
-        <td><input class="text-input" type="text" id="ert_time_to_100_input" size="10"></td>
-        <td><input class="text-input" type="text" id="ert_time_to_150_input" size="10"></td>
-        <td><input class="text-input" type="text" id="ert_time_to_200_input" size="10"></td>
-        <td><input class="text-input" type="text" id="ert_time_to_top_speed_input" size="10"></td>
-        <td><input class="text-input" type="text" id="ert_speed_at_finish_input" size="10"></td>
-        <td><button class="button" type="button" onclick="addOrModifyExtendedResultsTableRecord()">Add</button></td>
+        <td><input class="text-input" type="text" id="ut_upload_id_input" size="3"></td>
+        <td><input class="text-input" type="text" id="ut_upload_ts_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ut_mac_address_input" size="10"></td>
+        <td><input class="text-input" type="text" id="ut_device_id_input" size="3"></td>
+        <td><input class="text-input" type="text" id="ut_time_to_60_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_time_to_100_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_time_to_150_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_time_to_200_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_time_to_top_speed_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_speed_at_finish_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_gps_top_speed_input" size="6"></td>
+        <td><input class="text-input" type="text" id="ut_result_id_input" size="3"></td>
+        <td><input class="text-input" type="text" id="ut_datafile_path_input" size="30"></td>
+        <td><button class="button" type="button" onclick="addOrModifyUploadTableRecord()">Add</button></td>
     </tr>
 </table>
 <div id="extended_results_table_errors" style="font-family:monospace"></div>

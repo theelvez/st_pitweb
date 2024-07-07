@@ -62,12 +62,12 @@
         .left {
             overflow-x: visible;
             overflow-y: scroll;
-            height: 900px
+            height: 85vh
         }
         .right {
             overflow-x: visible;
             overflow-y: scroll;
-            height: 900px
+            height: 85vh
         }
         .SxS:after {
             content: "";
@@ -291,6 +291,14 @@
         function autoScheduleRemaining() {
             postAndReload("populate_run_table", "");
         }
+        function applyUploadToRunId(upload_id, result_id_input) {
+            result_id = document.getElementById(result_id_input).value;
+            postAndReload("apply_upload_to_run",
+                "" +
+                upload_id + "," + 
+                result_id 
+            );
+        }
         function addRun(result_id, driver_id, car_select_name, heat_run_input) {
             car_id_device_id = document.getElementById(car_select_name).value.split(',');
             car_id = car_id_device_id[0];
@@ -338,10 +346,11 @@
         <li><a href="/">Home</a></li>
         <li><a href="/raw-tables">Raw Tables View</a></li>
         <li><a href="/schedule">Schedule View</a></li>
-</ul>
+        <li><a href="/results">Results View</a></li>
+    </ul>
     <h1>SVTdF Schedule View</h1>
 <!-------------------------------------------------------->
-<div id="target_div">Watch this space...</div>
+<div id="target_div"></div>
 <div class="SxS">
 <div class="column left">
     <h3 class="table_title">Schedule</h3>
@@ -355,6 +364,8 @@
             <!--driver-->
             <td>driver_name</td>
             <td>drv_id</td>
+            <!--result-->
+            <td>res_id</td>
             <!--device-->
             <td>dev_id</td>
             <!--<td>device_in_car</td>-->
@@ -365,6 +376,7 @@
             <td>top_speed</td>
             <!-- schedule -->
             <td>move to</td>
+            <td>remove</td>
         </tr>
     {% for item in schedule %}
         <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
@@ -372,6 +384,7 @@
             <td name="run">{{ item.run }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="driver_id">{{ item.driver_id }}</td>
+            <td name="result_id">{{ item.result_id }}</td>
             <td name="device_id">{{ item.device_id }}</td>
             <!--<td name="device_in_car">{{ item.device_in_car }}</td>-->
             <td name="car_id">{{ item.car_id }}</td>
@@ -411,6 +424,27 @@
                 </td>
                 <td><input class="text-input" type="text" id="add_to_input_{{entry.driver_id}}" size="5">
                     <button class="button" type="button" onclick="addRun({{next_result_id}},{{entry.driver_id}},'car_select_driver_id_{{entry.driver_id}}','add_to_input_{{entry.driver_id}}')">Add Run</button></td>
+            </tr>
+        {% endfor %}    
+    </table>
+    <h3 class="table_title">Unmatched Uploads</h3>
+    <table>
+        <table style="font-family:monospace">
+            <tr class="column_name">
+                <td>upload_id</td>
+                <td>timestamp</td>
+                <td>dev_id</td>
+                <td>top_speed</td>
+                <td>apply_to_res_id</td>
+            </tr>
+        {% for entry in unmatched_uploads %}
+            <tr>
+                <td>{{entry.upload_id}}</td>
+                <td>{{entry.upload_timestamp}}</td>
+                <td>{{entry.device_id}}</td>
+                <td>{{entry.gps_top_speed}}</td>
+                <td><input class="text-input" type="text" id="apply_upload_to_input_{{entry.upload_id}}" size="5">
+                    <button class="button" type="button" onclick="applyUploadToRunId({{entry.upload_id}},'apply_upload_to_input_{{entry.upload_id}}')">Apply</button></td>
             </tr>
         {% endfor %}    
     </table>

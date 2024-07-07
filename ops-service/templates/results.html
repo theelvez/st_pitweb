@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Results View</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: medium;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 1px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 900px
+        }
+        .right {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 900px
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+        function runValidationChecks() {
+            //
+            // Insert space between heats
+            //
+            const rows = document.getElementsByName('schedule_row');
+            const header = document.getElementById('schedule_view_header');
+            var curHeat = 1;
+            {
+                var newRow = document.createElement("tr");
+
+                newRow.innerHTML = "<td colspan=10>Heat 1</td>";
+                newRow.style.backgroundColor = "#000022"
+                header.before(newRow);
+            }
+            for (let i = 0; i < rows.length; i++) {
+                if (i == rows.length) {
+                    continue;
+                }
+                if (rows[i+1] === undefined) {
+                    continue;
+                }
+                const nextHeatElement = rows[i+1].children.namedItem('heat');
+                if (nextHeatElement === undefined) {
+                    continue;
+                }
+                const nextHeat = nextHeatElement.innerText;
+                if (curHeat != nextHeat) {
+                    var newRow = document.createElement("tr");
+                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + " </td>";
+                    newRow.style.backgroundColor = "#000022"
+                    rows[i].after(newRow);
+                    var newHeader = document.createElement("tr");
+                    newHeader.innerHTML = header.innerHTML;
+                    newHeader.classList.add("column_name");
+                    newRow.after(newHeader);
+
+                    curHeat++;
+                }
+            }            
+        }
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <h1>SVTdF Results 2024</h1>
+<!-------------------------------------------------------->
+<div>
+    <table id="schedule_view" style="font-family:monospace">
+        <tr id="schedule_view_header" class="column_name">
+            <!--schedule-->
+            <td>heat</td>
+            <td>run</td>
+            <!--driver-->
+            <td>driver_name</td>
+            <!--car-->
+            <td>car_description</td>
+            <!--result-->
+            <td>top_speed</td>
+        </tr>
+    {% for item in schedule %}
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td name="top_speed">{{ item.top_speed }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+</div>
+</body>
+</html>
