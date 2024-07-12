@@ -204,6 +204,16 @@
             }
 
             //
+            // highlight device_id == 0
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const device_id = rows[i].children.namedItem('device_id');
+                if (device_id.innerText == "0") {
+                    device_id.classList.add('error_cell');
+                }
+            }
+
+            //
             // Insert space between heats
             //
             const header = document.getElementById('schedule_view_header');
@@ -291,6 +301,9 @@
         function autoScheduleRemaining() {
             postAndReload("populate_run_table", "");
         }
+        function assignDevices() {
+            postAndReload("assign_devices_to_runs", "");
+        }
         function applyUploadToRunId(upload_id, result_id_input) {
             result_id = document.getElementById(result_id_input).value;
             postAndReload("apply_upload_to_run",
@@ -342,12 +355,13 @@
     <link rel="shortcut icon" href="../static/logo.png">
 </head>
 <body onload="runValidationChecks()">
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <!--<link rel="icon" type="image/png" href="/logo.png" />-->
     <ul>
         <li><a href="/">Home</a></li>
         <li><a href="/raw-tables">Raw Tables View</a></li>
         <li><a href="/schedule">Schedule View</a></li>
-        <li><a href="/results">Results View</a></li>
+        <li><a href="/results-simple">Results Simple View</a></li>
+        <li><a href="/speed-trap-view">Speed Trap View</a></li>
     </ul>
     <h1>SVTdF Schedule View</h1>
 <!-------------------------------------------------------->
@@ -357,6 +371,7 @@
     <h3 class="table_title">Schedule</h3>
     <button class="button" type="button" onclick="emptyRunTable()">Delete Schedule</button>
     <button class="button" type="button" onclick="autoScheduleRemaining()">Auto-Schedule Remaining Runs</button>
+    <button class="button" type="button" onclick="assignDevices()">Assign Devices To Runs</button>
     <table id="schedule_view" style="font-family:monospace">
         <tr id="schedule_view_header" class="column_name">
             <!--schedule-->
@@ -419,7 +434,7 @@
                 <td>
                     <select id="car_select_driver_id_{{entry.driver_id}}">
                         {% for car in cars %}
-                        <option value="{{car.car_id}},{{car.device_in_car}}">({{car.car_id}}) {{car.car_description}}</option>
+                        <option {% if entry.default_car_id == car.car_id %} selected="selected" {% endif %} value="{{car.car_id}},{{car.device_in_car}}">({{car.car_id}}) {{car.car_description}}</option>
                         {% endfor %}
                     </select>
                 </td>

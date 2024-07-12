@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Results View</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: larger;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 1.5px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+            height: 85vh
+        }
+        .right {
+            overflow-x: visible;
+            height: 85vh
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+        function GetURLParameter(sParam) {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++) 
+            {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam) 
+                {
+                    return sParameterName[1];
+                }
+            }
+        }
+
+        function runValidationChecks() {
+
+            var eventSource = new EventSource("/stream")
+            eventSource.onmessage = function(e) {
+                location.reload(true);
+            };        
+
+            nxt = GetURLParameter("next_id")
+            if (nxt != undefined)
+            {
+                document.getElementById("next_upload_car_id").innerText = nxt
+            }
+
+///*
+            //
+            // Insert space between heats
+            //
+            const rows = document.getElementsByName('schedule_row');
+            //const header = document.getElementById('schedule_view_header');
+            var curHeat = 0;
+            for (let i = 0; i < rows.length; i++) {
+                thisRowHeatElement = rows[i].children.namedItem('heat');
+                const thisHeat = thisRowHeatElement.innerText;
+                if (curHeat != thisHeat) {
+                    var newRow = document.createElement("tr");
+                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td>MPH @</td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td><td style='font-size:smaller;background-color:#002200'>MPH @</td>";
+                    newRow.style.backgroundColor = "#000022"
+                    rows[i].before(newRow);
+                    var newHeader = document.createElement("tr");
+                    newHeader.innerHTML = 
+                    "<tr class='column_name'>" +
+                    "    <td>heat</td>" + 
+                    "    <td>run</td>" + 
+                    "    <td>driver_name</td>" + 
+                    "    <td>car_description</td>" + 
+                    "    <td>max</td>" + 
+                    "    <td style='font-size:smaller'>60</td>" +
+                    "    <td style='font-size:smaller'>100</td>" +
+                    "    <td style='font-size:smaller'>150</td>" +
+                    "    <td style='font-size:smaller'>200</td>" +
+                    "    <td style='font-size:smaller'>top</td>" +
+                    "    <td style='font-size:smaller'>finish</td>" + 
+                    "</tr>";
+                    newHeader.classList.add("column_name");
+                    newRow.after(newHeader);
+
+                    curHeat = thisHeat;
+                }
+            }
+//*/
+        }
+
+        function postAndReload(path, body) {
+            fetch("http://localhost/" + path, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+                parts = window.location.href.split('=')
+                newHref = parts[0] + "=" + document.getElementById("next_upload_car_id").innerText
+                location.replace(newHref);
+            });
+        }
+
+        function uploadResult() {
+            var next_id_element = document.getElementById("next_upload_car_id")
+            const next_id = parseInt(next_id_element.innerText)
+            next_id_element.innerText = next_id + 1
+
+            postAndReload("upload_test_log", "" + next_id)            
+        }
+
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+    <link rel="icon" type="image/png" href="/logo.png" />
+<!-------------------------------------------------------->
+<div style="color:red">
+    {% for error in errors %}
+    {{ error }}<br>
+    {% endfor %}
+</div>
+<div>
+    next upload car id: <span id="next_upload_car_id">0</span>
+    <button class="button" type="button" onclick="uploadResult()">Upload</button><BR>
+</div>
+<div>
+    <div class="SxS">
+    <div class="column left">
+    <table id="schedule_view_left" style="font-family:monospace">
+        {% for item in schedule %}
+        {% if item.heat <= 5 %}
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td style='color:{% if item.top_speed >= 200 %}limegreen{% else %}darkorange{% endif %}' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+    </div>
+    <div class="column right">
+    <table id="schedule_view_right" style="font-family:monospace">
+        {% for item in schedule %}
+        {% if item.heat > 5 %}
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td style='color:{% if item.top_speed >= 200 %}limegreen{% else %}darkorange{% endif %}' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
+            <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+    </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Speed Trap CSV</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: larger;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 1.5px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+            height: 85vh
+        }
+        .right {
+            overflow-x: visible;
+            height: 85vh
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+    <link rel="icon" type="image/png" href="/logo.png" />
+<!-------------------------------------------------------->
+<div>
+    heat,run,car,plate,driver,laser_trap_speed,time<br>
+    {% for item in schedule %}
+    {{ item.heat }},{{ item.run }},{{ item.car_description }},{{ item.car_plate }},{{ item.driver_name.replace(',',' ') }}<br>
+    {% endfor %}
+</div>
+</body>
+</html>

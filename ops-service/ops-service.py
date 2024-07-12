@@ -6,6 +6,7 @@ from time import sleep, ctime, time
 from threading import Event
 import csv
 import os
+import random
 
 app = Flask(__name__)
 
@@ -27,6 +28,7 @@ db = SQLAlchemy(app)
 runs_per_heat = 8
 
 print("ops-service starting...\n")
+
 
 # ------------------------------------------------------------
 # schema
@@ -104,21 +106,29 @@ class UploadTable(db.Model):
         return f"<UploadTable {self.upload_id}>"
     
 class UnscheduledDriver:
-    def __init__(self, driver_id, driver_name, scheduled_run_count, paid_run_count):
+    def __init__(self, driver_id, driver_name, scheduled_run_count, paid_run_count, default_car_id):
         self.driver_id = driver_id
         self.driver_name = driver_name
         self.scheduled_run_count = scheduled_run_count
         self.paid_run_count = paid_run_count
+        self.default_car_id = default_car_id
     def __repr__(self):
         return f"<({self.driver_id}) {self.driver_name} s:{self.scheduled_run_count} p:{self.paid_run_count}>"
     
 class RunDataRow:
-    def __init__(self, mac_address, timestamp, lat, long, speed):
+    def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, annotations):
             self.mac_address = mac_address
-            self.timestamp = timestamp
+            self.timestamp_ms = timestamp_ms
+            self.speed = speed
             self.lat = lat
             self.long = long
-            self.speed = speed
+            self.altitude = altitude
+            self.sats = sats
+            self.temp = temp
+            self.pressure = pressure
+            self.millivolts = millivolts
+            self.annotations = annotations
+        
 
 # ------------------------------------------------------------
 # /
@@ -135,11 +145,18 @@ def find_unscheduled_drivers():
         num_runs_scheduled = RunTable.query.filter_by(driver_id = driver.driver_id).count()
         num_runs_paid = driver.run_count
         if (num_runs_paid != num_runs_scheduled):
+            q = CarTable.query.filter(CarTable.car_owner.contains(driver.driver_name))
+            if (q.count() > 0):
+                default_car_id = q.first().car_id
+            else:
+                default_car_id = 0
+
             new_entry = UnscheduledDriver(
                 driver_id = driver.driver_id,
                 driver_name = driver.driver_name,
                 scheduled_run_count = num_runs_scheduled,
-                paid_run_count = num_runs_paid
+                paid_run_count = num_runs_paid,
+                default_car_id = default_car_id
             )
             unscheduled_drivers.append(new_entry)
     return unscheduled_drivers
@@ -148,14 +165,53 @@ def find_unmatched_uploads():
     unmatched_uploads = UploadTable.query.filter_by(result_id = -1).all()
     return unmatched_uploads
 
+def init_database():
+    if UploadTable.query.filter_by(upload_id = -1).count() <= 0:
+        new_row = UploadTable(
+            upload_id = -1,
+            upload_timestamp = "<none>",
+            mac_address = "<none>",
+            device_id = -1,
+            time_to_60 = 0,
+            time_to_100 = 0,
+            time_to_150 = 0,
+            time_to_200 = 0,
+            time_to_top_speed = 0,
+            speed_at_finish = 0,
+            gps_top_speed = 0,
+            result_id = -2,
+            datafile_path = "<none>"
+        )
+        db.session.add(new_row)
+        db.session.commit()
+    if DeviceAssignmentTable.query.filter_by(device_id = 0).count() <= 0:
+        new_row = DeviceAssignmentTable(
+            device_id = 0,
+            car_id = 0
+        )
+        db.session.add(new_row)
+        db.session.commit()
+    if DriverTable.query.filter_by(driver_id = 0).count() <= 0:
+        new_row = DriverTable(
+            driver_id = 0,
+            driver_name = "UNKNOWN",
+            run_count = 0
+        )
+    if DeviceTable.query.filter_by(device_id = 0).count() <= 0:
+        new_row = DeviceTable(
+            mac_address = "NONE",
+            device_id = 0
+        )
+
 # ------------------------------------------------------------
 # /schedule
 # ------------------------------------------------------------
 @app.route("/schedule")
 def schedule():
+    init_database()
     schedule = RunTable.query.order_by(RunTable.heat, RunTable.run).join(
-        DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
-    ).join(
+#        DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+#    ).join(
         CarTable, RunTable.car_id == CarTable.car_id
     ).join(
         DriverTable, DriverTable.driver_id == RunTable.driver_id
@@ -168,16 +224,20 @@ def schedule():
         RunTable.top_speed,
         DriverTable.driver_id,
         DriverTable.driver_name,
-        DeviceAssignmentTable.car_id.label('device_in_car'),
+        #DeviceAssignmentTable.car_id.label('device_in_car'),
         CarTable.car_description
     )
     
-    cars = CarTable.query.order_by(CarTable.car_description).join(
-        DeviceAssignmentTable, CarTable.car_id == DeviceAssignmentTable.car_id
-    ).with_entities(
+    #cars = CarTable.query.order_by(CarTable.car_description).join(
+    #    DeviceAssignmentTable, CarTable.car_id == DeviceAssignmentTable.car_id
+    #).with_entities(
+    #    CarTable.car_id,
+    #    CarTable.car_description,
+    #    DeviceAssignmentTable.car_id.label('device_in_car')
+    #)
+    cars = CarTable.query.order_by(CarTable.car_description).with_entities(
         CarTable.car_id,
-        CarTable.car_description,
-        DeviceAssignmentTable.car_id.label('device_in_car')
+        CarTable.car_description
     )
 
     unscheduled_drivers = find_unscheduled_drivers()
@@ -199,16 +259,19 @@ def schedule():
         )
 
 # ------------------------------------------------------------
-# /results
+# /results-simple
 # ------------------------------------------------------------
-@app.route("/results")
-def results():
+@app.route("/results-simple")
+def results_simple():
+    init_database()
     schedule = RunTable.query.order_by(RunTable.heat, RunTable.run).join(
         DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
     ).join(
         CarTable, RunTable.car_id == CarTable.car_id
     ).join(
         DriverTable, DriverTable.driver_id == RunTable.driver_id
+    ).join(
+        UploadTable, UploadTable.upload_id == RunTable.upload_id
     ).with_entities(
         RunTable.result_id,
         RunTable.heat,
@@ -219,19 +282,118 @@ def results():
         DriverTable.driver_id,
         DriverTable.driver_name,
         DeviceAssignmentTable.car_id.label('device_in_car'),
-        CarTable.car_description
+        CarTable.car_description,
+        UploadTable.time_to_60,
+        UploadTable.time_to_100,
+        UploadTable.time_to_150,
+        UploadTable.time_to_200,
+        UploadTable.time_to_top_speed,
+        UploadTable.speed_at_finish
     )
 
+    errors = []
+
+    upload_ids = {1, 2, 3}
+    upload_ids.clear()
+    uploads = UploadTable.query.with_entities(UploadTable.upload_id).all()
+    for upload in uploads:
+        upload_ids.add(upload.upload_id)
+
+    runs = RunTable.query.with_entities(
+        RunTable.heat,
+        RunTable.run,
+        RunTable.upload_id
+    )
+
+    for run in runs:
+        if not (run.upload_id in upload_ids):
+            errors.append(f"ERROR: heat {run.heat} run {run.run} refers to an unknown upload_id\n")
+
     return render_template(
-        "results.html",
-        schedule = schedule.all()
+        "results-simple.html",
+        schedule = schedule.all(),
+        errors = errors
         )
+
+# ------------------------------------------------------------
+# /pit-results
+# ------------------------------------------------------------
+@app.route("/pit-results")
+def pit_results():
+    init_database()
+    top_speed = (
+        RunTable.query.order_by(desc(RunTable.top_speed)).join(
+            DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+        ).join(
+            CarTable, RunTable.car_id == CarTable.car_id
+        ).join(
+            DriverTable, DriverTable.driver_id == RunTable.driver_id
+        )
+        .with_entities(
+            RunTable.device_id,
+            DriverTable.driver_name.label('name'),
+            CarTable.car_description.label('car'),
+            RunTable.heat,
+            RunTable.run.label('run_number'),
+            RunTable.top_speed,
+        )
+    )
+    run_number = (
+        RunTable.query.order_by(RunTable.heat, RunTable.run).join(
+            DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+        ).join(
+            CarTable, RunTable.car_id == CarTable.car_id
+        ).join(
+            DriverTable, DriverTable.driver_id == RunTable.driver_id
+        )
+        .with_entities(
+            RunTable.device_id,
+            DriverTable.driver_name.label('name'),
+            CarTable.car_description.label('car'),
+            RunTable.heat,
+            RunTable.run.label('run_number'),
+            RunTable.top_speed,
+        )
+        .all()
+    )
+    name = (
+        RunTable.query.order_by(DriverTable.driver_name, RunTable.heat, RunTable.run).join(
+            DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+        ).join(
+            CarTable, RunTable.car_id == CarTable.car_id
+        ).join(
+            DriverTable, DriverTable.driver_id == RunTable.driver_id
+        )
+        .with_entities(
+            RunTable.device_id,
+            DriverTable.driver_name.label('name'),
+            CarTable.car_description.label('car'),
+            RunTable.heat,
+            RunTable.run.label('run_number'),
+            RunTable.top_speed,
+        )
+    )
+
+    club = name.filter(RunTable.top_speed >= 200.0).order_by(DriverTable.driver_name).with_entities(DriverTable.driver_name.label('name')).distinct()
+
+    last = []
+
+    return render_template(
+        "pit-results.html",
+        top_speed=top_speed.all(),
+        run_number=run_number,
+        name=name.all(),
+        leader=top_speed.first(),
+        club=club.all(),
+        last=last,
+    )
 
 # ------------------------------------------------------------
 # /raw-tables
 # ------------------------------------------------------------
 @app.route("/raw-tables")
 def raw_tables():
+    init_database()
     print("raw_tables:\n")
     devices = (
         DeviceTable.query.order_by(DeviceTable.device_id)
@@ -277,12 +439,8 @@ def raw_tables():
             RunTable.driver_id,
             RunTable.car_id,
             RunTable.device_id,
-            #RunTable.gps_speed_timestamp,
-            #RunTable.gps_top_speed,
-            #RunTable.laser_speed_timestamp,
             RunTable.laser_top_speed,
             RunTable.top_speed,
-            #RunTable.datafile_path
             RunTable.upload_id
         )
         .all()
@@ -307,7 +465,6 @@ def raw_tables():
         .all()
     )
     print("    query done\n")
-    print(runs)
     return render_template(
         "raw-tables.html", 
         devices=devices,
@@ -316,6 +473,33 @@ def raw_tables():
         device_assignments=device_assignments,
         runs=runs,
         uploads=uploads,
+    )
+
+# ------------------------------------------------------------
+# /speed-trap-view
+# ------------------------------------------------------------
+@app.route("/speed-trap-view")
+def speed_trap_view():
+    init_database()
+    schedule = RunTable.query.order_by(RunTable.heat, RunTable.run).join(
+        DeviceAssignmentTable, RunTable.device_id == DeviceAssignmentTable.device_id
+    ).join(
+        CarTable, RunTable.car_id == CarTable.car_id
+    ).join(
+        DriverTable, DriverTable.driver_id == RunTable.driver_id
+    ).join(
+        UploadTable, UploadTable.upload_id == RunTable.upload_id
+    ).with_entities(
+        RunTable.heat,
+        RunTable.run,
+        DriverTable.driver_name,
+        CarTable.car_description,
+        CarTable.car_plate
+    )
+
+    return render_template(
+        "speed-trap-view.html",
+        schedule = schedule.all()
     )
 
 # ------------------------------------------------------------
@@ -788,11 +972,11 @@ def empty_run_table():
     db.session.commit()
     
     #
-    # Car -> Device mapping: start with car_id == device_id
-    # 
-    cars = CarTable.query.all()
-    for car in cars:
-        db.session.add(DeviceAssignmentTable(car_id = car.car_id, device_id = car.car_id))
+    # Car -> Device mapping: start by 
+    #  
+    #cars = CarTable.query.all()
+    #for car in cars:
+    #    db.session.add(DeviceAssignmentTable(car_id = car.car_id, device_id = car.car_id))
     
     db.session.commit()
     db_update_event.set()
@@ -816,6 +1000,8 @@ def find_next_available_heat(driver_id, car_id, next_unfull_heat, max_heat):
 
     return heat, next_run
 
+    
+
 # ------------------------------------------------------------
 # /populate_run_table
 # ------------------------------------------------------------
@@ -833,12 +1019,8 @@ def populate_run_table():
     existing_results = RunTable.query.order_by(desc(RunTable.result_id))
     if (existing_results.count() != 0):
         result_id = existing_results.first().result_id + 1
-    #gps_speed_timestamp = "--"
-    #gps_top_speed = 0.0
-    #laser_speed_timestamp = "--"
     laser_top_speed = 0.0
     top_speed = 0.0
-    #datafile_path = "--"
     upload_id = -1
     drivers = DriverTable.query.order_by(desc(DriverTable.run_count), DriverTable.driver_id).all()
 
@@ -883,13 +1065,9 @@ def populate_run_table():
                 run = run,
                 driver_id = driver_id,
                 car_id = car_id,
-                device_id = car_id,
-                #gps_speed_timestamp = gps_speed_timestamp,
-                #gps_top_speed = gps_top_speed,
-                #laser_speed_timestamp = laser_speed_timestamp,
+                device_id = 0,
                 laser_top_speed = laser_top_speed,
                 top_speed = top_speed,
-                #datafile_path = datafile_path
                 upload_id = upload_id
             )
             result_id += 1
@@ -898,6 +1076,46 @@ def populate_run_table():
     db.session.commit()
     db_update_event.set()
     return jsonify({"message": "run table populated"}), 200
+
+# ------------------------------------------------------------
+# /assign_devices_to_runs
+# ------------------------------------------------------------
+# Expected format:
+#   [Content-Type: text/plain]
+#   POST 
+@app.route("/assign_devices_to_runs", methods=["POST"])
+def assign_devices_to_runs():
+    DeviceAssignmentTable.query.delete()
+    db.session.commit()
+    runs = RunTable.query.order_by(RunTable.heat, RunTable.run).all()
+
+    car_dict = {}
+    next_device_id = 1
+
+    for run in runs:
+        car_id = run.car_id
+        existing_assignment = car_dict.get(car_id)
+        device_id = 0
+
+        if not existing_assignment:
+            device_id = next_device_id
+            car_dict[car_id] = device_id
+            next_device_id += 1
+            db.session.add(
+                DeviceAssignmentTable(
+                    car_id = car_id,
+                    device_id = device_id
+                )
+            )
+        else:
+            device_id = existing_assignment
+
+        run.device_id = device_id
+        db.session.commit()
+
+    db_update_event.set()
+    return jsonify({"message": "devices assigned to runs"}), 200
+
 
 def renumber_runs_in_heat(heat):
     runs = RunTable.query.filter(RunTable.heat == heat).order_by(RunTable.run).all()
@@ -1071,27 +1289,27 @@ def calculate_timestamp_of_speed(rows, speed: float):
 
     if found:
         if index > 0:
-            t0 = float(rows[index-1].timestamp)
-            t1 = float(rows[index].timestamp)
+            t0 = float(rows[index-1].timestamp_ms)
+            t1 = float(rows[index].timestamp_ms)
             s0 = float(rows[index-1].speed)
             s1 = float(rows[index].speed)
             sX = speed
             tX = t0 + (((t1-t0)/(s1-s0)) * (sX-s0))
             time = tX
         else:
-            time = float(rows[0].timestamp)
+            time = float(rows[0].timestamp_ms)
     
-    return time, found
+    return (time / 1000.0), found
 
 def get_top_speed(rows):
     time = 0.0
     speed = 0.0
     for row in rows:
         if float(row.speed) > speed:
-            time = float(row.timestamp)
+            time = float(row.timestamp_ms)
             speed = float(row.speed)
     
-    return time, speed
+    return (time / 1000.0), speed
 
 def round_to_hundredths(value: float):
     hundredths = int((value + 0.005) * 100)
@@ -1112,7 +1330,7 @@ def process_log_file(rows):
         time_to_150 =       round_to_hundredths(time_to_150 - time_to_0),
         time_to_200 =       round_to_hundredths(time_to_200 - time_to_0),
         time_to_top_speed = round_to_hundredths(time_to_top_speed - time_to_0),
-        gps_top_speed = top_speed,
+        gps_top_speed = round_to_hundredths(top_speed),
         speed_at_finish = 0.0)
 
 def parse_raw_data(data):
@@ -1130,17 +1348,84 @@ def parse_raw_data(data):
 
         if (len(row) >= 5):
             rows.append(RunDataRow(
-                mac_address=row[0],
-                timestamp=row[1],
-                lat=row[2],
-                long=row[3],
-                speed=row[4],
+                mac_address = row[0],
+                timestamp_ms = row[1],
+                speed = row[2],
+                lat = row[3],
+                long = row[4],
+                altitude = row[5],
+                sats = row[6],
+                temp = row[7],
+                pressure = row[8],
+                millivolts = row[9],
+                annotations = row[10],
             ))
 
     if len(rows) <= 0:
         return None
     
     return rows
+
+def random_value(min, max):
+    return (random.random() * (max-min)) + min
+
+@app.route("/generate_test_run", methods=["POST"])
+def generate_test_run():
+    devices = DeviceTable.query.all()
+    for device in devices:
+        sec_to_top_speed = random_value(90, 120)
+        top = random_value(100, 222)
+        sec_to_stop = random_value(60, 90)
+
+        # y = mx + b
+        # y = speed, x = time in seconds
+        # m = top / sec_to_top_speed
+        row_count_accel = sec_to_top_speed * 10    # 10 hz
+        row_count_decel = sec_to_stop * 10
+        accel_step = top / row_count_accel
+        decel_step = top / row_count_decel
+
+        lat = 0
+        long = 0
+        altitude = 0
+        sats = 0
+        temp = 0
+        pressure = 0
+        millivolts = 0
+        annotations = 0
+
+        with open(f"C:\\repos\\st_pitweb\\ops-service\\TestLogs\\Device_{device.device_id}.csv", "w") as f:
+            print(f"header", file=f)
+            time = 0
+            speed = 0.0
+            row_idx = 0
+            while row_idx < row_count_accel: 
+                print(f"{device.mac_address},{time},{speed},{lat},{long},{altitude},{sats},{temp},{pressure},{millivolts},{annotations}", file=f)
+                speed += accel_step
+                row_idx += 1
+                time += 100
+
+            row_idx = 0
+            while row_idx < row_count_decel: 
+                print(f"{device.mac_address},{time},{speed}", file=f)
+                speed -= decel_step
+                row_idx += 1
+                time += 100
+
+    return jsonify({"message": f"run generated"}), 200
+
+# ------------------------------------------------------------
+# /upload_test_log
+# ------------------------------------------------------------
+# POST {device_id}
+@app.route("/upload_test_log", methods=["POST"])
+def upload_test_log():
+    device_id = int(request.get_data(as_text=True))
+    filename = f"C:\\repos\\st_pitweb\\ops-service\\TestLogs\\Device_{device_id}.csv"
+    with open(filename, "r") as f:
+        raw_data = f.read()
+        upload_run_data(raw_data)
+    return jsonify({"message": "uploaded"}), 200
 
 @app.route("/apply_upload_to_run", methods=["POST"])
 def apply_upload_to_run():
@@ -1169,10 +1454,7 @@ def apply_upload_to_run():
     return jsonify({"message": f"Applied upload_id {upload_id} to result_id {result_id}"}), 200
 
 
-@app.route("/upload_run_data", methods=["POST"])
-def upload_run_data():
-    print("upload_run_data:")
-    raw_data = request.get_data(as_text=True)
+def upload_run_data(raw_data):
     data = raw_data.split("\n")
 
     #
@@ -1236,6 +1518,11 @@ def upload_run_data():
 
     return jsonify({"message": f"Data received, saved to '{filename}'"}), 200
 
+@app.route("/upload_run_data", methods=["POST"])
+def upload_run_data_post():
+    print("upload_run_data:")
+    raw_data = request.get_data(as_text=True)
+    return upload_run_data(raw_data)
 
 def get_message():
     '''this could be any function that blocks until data is ready'''
