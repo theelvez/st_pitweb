@@ -116,7 +116,7 @@ class UnscheduledDriver:
         return f"<({self.driver_id}) {self.driver_name} s:{self.scheduled_run_count} p:{self.paid_run_count}>"
     
 class RunDataRow:
-    def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, accel_z, annotations):
+    def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, accel_x, accel_y, accel_z, annotations):
             self.mac_address = mac_address
             self.timestamp_ms = timestamp_ms
             self.speed = speed
@@ -127,6 +127,8 @@ class RunDataRow:
             self.temp = temp
             self.pressure = pressure
             self.millivolts = millivolts
+            self.accel_x = accel_x
+            self.accel_y = accel_y
             self.accel_z = accel_z
             self.annotations = annotations
         
@@ -1348,7 +1350,7 @@ def parse_raw_data(data):
         if (row_index <= 3):
             continue
 
-        if (len(row) >= 12):
+        if (len(row) >= 14):
             rows.append(RunDataRow(
                 mac_address = row[0],
                 timestamp_ms = row[1],
@@ -1360,8 +1362,10 @@ def parse_raw_data(data):
                 temp = row[7],
                 pressure = row[8],
                 millivolts = row[9],
-                accel_z = row[10],
-                annotations = row[11],
+                accel_x = row[10],
+                accel_y = row[11],
+                accel_z = row[12],
+                annotations = row[13],
             ))
 
     if len(rows) <= 0:

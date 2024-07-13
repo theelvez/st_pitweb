@@ -93,6 +93,12 @@
             return "run-count-ok";
         }
 
+        function clearRun(run_number) {
+            if (prompt("Delete all runs in heat " + run_number + "?")) {
+                
+            }
+        }
+
         function runValidationChecks() {
 
             var targetContainer = document.getElementById("target_div");
@@ -221,7 +227,7 @@
             {
                 var newRow = document.createElement("tr");
                 var runCount = heat_run_count.get(1);
-                newRow.innerHTML = "<td colspan=10>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span></td>";
+                newRow.innerHTML = "<td colspan=10>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearRun(1)'>Clear Heat</button></td>";
                 newRow.style.backgroundColor = "#000022"
                 header.before(newRow);
             }
@@ -240,7 +246,7 @@
                 if (curHeat != nextHeat) {
                     var newRow = document.createElement("tr");
                     var runCount = heat_run_count.get(parseInt(nextHeat));
-                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span></td>";
+                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearRun(" + nextHeat + ")'>Clear Heat</button></td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].after(newRow);
                     var newHeader = document.createElement("tr");
