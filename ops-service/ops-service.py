@@ -116,7 +116,7 @@ class UnscheduledDriver:
         return f"<({self.driver_id}) {self.driver_name} s:{self.scheduled_run_count} p:{self.paid_run_count}>"
     
 class RunDataRow:
-    def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, annotations):
+    def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, accel_z, annotations):
             self.mac_address = mac_address
             self.timestamp_ms = timestamp_ms
             self.speed = speed
@@ -127,6 +127,7 @@ class RunDataRow:
             self.temp = temp
             self.pressure = pressure
             self.millivolts = millivolts
+            self.accel_z = accel_z
             self.annotations = annotations
         
 
@@ -1192,6 +1193,7 @@ def mac_address_to_device_and_car(mac_address):
     device_id = None
     car_id = None
 
+    mac_address = mac_address.upper()
     device_table_row = DeviceTable.query.filter(DeviceTable.mac_address == mac_address).first()
     if not device_table_row:
         return device_id, car_id
@@ -1335,18 +1337,18 @@ def process_log_file(rows):
 
 def parse_raw_data(data):
     rows = []
-    first = True
+    row_index = 0
 
     reader = csv.reader(data)
     for row in reader:
+        row_index += 1
         #
         # skip header row
         #
-        if (first):
-            first = False
+        if (row_index <= 3):
             continue
 
-        if (len(row) >= 5):
+        if (len(row) >= 12):
             rows.append(RunDataRow(
                 mac_address = row[0],
                 timestamp_ms = row[1],
@@ -1358,7 +1360,8 @@ def parse_raw_data(data):
                 temp = row[7],
                 pressure = row[8],
                 millivolts = row[9],
-                annotations = row[10],
+                accel_z = row[10],
+                annotations = row[11],
             ))
 
     if len(rows) <= 0:
@@ -1522,7 +1525,9 @@ def upload_run_data(raw_data):
 def upload_run_data_post():
     print("upload_run_data:")
     raw_data = request.get_data(as_text=True)
-    return upload_run_data(raw_data)
+    resp = upload_run_data(raw_data)
+    print(resp[0].response)
+    return resp
 
 def get_message():
     '''this could be any function that blocks until data is ready'''
