@@ -95,8 +95,12 @@
 
         function clearRun(run_number) {
             if (prompt("Delete all runs in heat " + run_number + "?")) {
-                
+
             }
+        }
+
+        function saveResultsToFile(filename) {
+            postOnly("save_results", filename)
         }
 
         function runValidationChecks() {
@@ -257,6 +261,16 @@
                     curHeat++;
                 }
             }
+        }
+        function postOnly(path, body) {
+            fetch("http://localhost/" + path, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+            });
         }
         function postAndReload(path, body) {
             fetch("http://localhost/" + path, {

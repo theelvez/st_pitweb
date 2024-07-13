@@ -4,6 +4,7 @@ from flask_sse import sse
 from sqlalchemy import desc, distinct, or_
 from time import sleep, ctime, time
 from threading import Event
+from typing import List
 import csv
 import os
 import random
@@ -116,6 +117,10 @@ class UnscheduledDriver:
         return f"<({self.driver_id}) {self.driver_name} s:{self.scheduled_run_count} p:{self.paid_run_count}>"
     
 class RunDataRow:
+    mac_address: str
+    timestamp_ms: float
+    speed: float
+    annotations: str
     def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, accel_x, accel_y, accel_z, annotations):
             self.mac_address = mac_address
             self.timestamp_ms = timestamp_ms
@@ -260,6 +265,15 @@ def schedule():
         unmatched_uploads = unmatched_uploads,
         next_result_id = next_result_id
         )
+
+@app.route("/save_results", methods=["POST"])
+def save_results():
+    results_html = results_simple()
+    with open(f"C:\\repos\\st_pitweb\\ops-service\\results\\results.html", "w") as f:
+        print(results_html, file=f)
+
+    return jsonify({"message": "results HTML page saved"}), 200
+
 
 # ------------------------------------------------------------
 # /results-simple
@@ -516,7 +530,7 @@ def remove_device_table_record():
     data = request.get_data(as_text=True)
     print(f"remove_device_table_record: {data}\n")
     if not data:
-        return jsonify({"message": "No data provided"}), 
+        return jsonify({"message": "No data provided"}), 200
 
     mac_address = data.strip()
     DeviceTable.query.filter_by(mac_address = mac_address).delete()
@@ -1280,13 +1294,17 @@ def upload_run_result():
 
     return jsonify({"message": "Data received"}), 200
 
-def calculate_timestamp_of_speed(rows, speed: float):
+def calculate_timestamp_of_speed(
+        rows: List[RunDataRow],
+        index_of_0: int, 
+        speed: float):
     time = 0.0
 
     found = False
-    index = 0
-    for row in rows:
-        if float(row.speed) >= speed:
+    index = index_of_0
+
+    while index < len(rows):
+        if float(rows[index].speed) >= speed:
             found = True
             break
         index += 1
@@ -1303,7 +1321,30 @@ def calculate_timestamp_of_speed(rows, speed: float):
         else:
             time = float(rows[0].timestamp_ms)
     
-    return (time / 1000.0), found
+        time -= float(rows[index_of_0].timestamp_ms)
+        return (time / 1000.0), found
+    else:
+        return 0.0, found
+
+def calculate_index_of_start(rows: List[RunDataRow]) -> int | bool:
+    index = len(rows)
+
+    while index > 0:
+        index -= 1
+        if (float(rows[index].speed) <= 3.0): # clamp below 3 MPH
+            return index, True
+    
+    return 0, False
+
+def find_finish_speed(rows: List[RunDataRow], index_of_0: int) -> float:
+    index = len(rows)
+
+    while index >= index_of_0:
+        index -= 1
+        if ("finish_line" in rows[index].annotations):
+            return float(rows[index].speed)
+
+    return float(rows[len(rows) - 1].speed)
 
 def get_top_speed(rows):
     time = 0.0
@@ -1320,22 +1361,26 @@ def round_to_hundredths(value: float):
     rounded = float(hundredths) / 100.0
     return rounded
 
-def process_log_file(rows):
-    time_to_0, found_0 = calculate_timestamp_of_speed(rows, 0.0)
-    time_to_60, found_60 = calculate_timestamp_of_speed(rows, 60.0)
-    time_to_100, found_100 = calculate_timestamp_of_speed(rows, 100.0)
-    time_to_150, found_150 = calculate_timestamp_of_speed(rows, 150.0)
-    time_to_200, found_200 = calculate_timestamp_of_speed(rows, 200.0)
+def process_log_file(rows) -> UploadTable:
+    index_of_0, found_0 = calculate_index_of_start(rows)
+    if not found_0:
+        return None
+    
+    time_to_60, found_60 = calculate_timestamp_of_speed(rows, index_of_0, 60.0)
+    time_to_100, found_100 = calculate_timestamp_of_speed(rows, index_of_0, 100.0)
+    time_to_150, found_150 = calculate_timestamp_of_speed(rows, index_of_0, 150.0)
+    time_to_200, found_200 = calculate_timestamp_of_speed(rows, index_of_0, 200.0)
+    speed_at_finish = find_finish_speed(rows, index_of_0)
     time_to_top_speed, top_speed = get_top_speed(rows)
 
     return UploadTable(
-        time_to_60 =        round_to_hundredths(time_to_60 - time_to_0),
-        time_to_100 =       round_to_hundredths(time_to_100 - time_to_0),
-        time_to_150 =       round_to_hundredths(time_to_150 - time_to_0),
-        time_to_200 =       round_to_hundredths(time_to_200 - time_to_0),
-        time_to_top_speed = round_to_hundredths(time_to_top_speed - time_to_0),
+        time_to_60 =        round_to_hundredths(time_to_60),
+        time_to_100 =       round_to_hundredths(time_to_100),
+        time_to_150 =       round_to_hundredths(time_to_150),
+        time_to_200 =       round_to_hundredths(time_to_200),
+        time_to_top_speed = round_to_hundredths(time_to_top_speed),
         gps_top_speed = round_to_hundredths(top_speed),
-        speed_at_finish = 0.0)
+        speed_at_finish = round_to_hundredths(speed_at_finish))
 
 def parse_raw_data(data):
     rows = []
@@ -1345,9 +1390,9 @@ def parse_raw_data(data):
     for row in reader:
         row_index += 1
         #
-        # skip header row
+        # skip header rows
         #
-        if (row_index <= 3):
+        if (row_index <= 2):
             continue
 
         if (len(row) >= 14):
@@ -1399,22 +1444,36 @@ def generate_test_run():
         temp = 0
         pressure = 0
         millivolts = 0
-        annotations = 0
+        accel_x = 0
+        accel_y = 0
+        accel_z = 0
 
         with open(f"C:\\repos\\st_pitweb\\ops-service\\TestLogs\\Device_{device.device_id}.csv", "w") as f:
-            print(f"header", file=f)
+            print(f"CurrentUTCTimeInMS=1615076834", file=f)
+            print(f"MAC Address,Millis,Current Speed,Current Latitude,Current Longitude,Current Altitude,Satellites In View,Current Temperature,Current Pressure,Millivolts,Acceleration X,Acceleration Y,Acceleration Z,Annotation", file=f)
             time = 0
             speed = 0.0
             row_idx = 0
             while row_idx < row_count_accel: 
-                print(f"{device.mac_address},{time},{speed},{lat},{long},{altitude},{sats},{temp},{pressure},{millivolts},{annotations}", file=f)
+                annotations = ""
+                if row_idx == 0:
+                    annotations = "start_line"
+                print(f"{device.mac_address},{time},{speed},{lat},{long},{altitude},{sats},{temp},{pressure},{millivolts},{accel_x},{accel_y},{accel_z},{annotations}", file=f)
+
                 speed += accel_step
                 row_idx += 1
                 time += 100
 
             row_idx = 0
             while row_idx < row_count_decel: 
-                print(f"{device.mac_address},{time},{speed}", file=f)
+                annotations = ""
+                last = False
+                if row_idx == int(row_count_decel * 0.1):
+                    annotations = "finish_line"
+                    last = True
+                print(f"{device.mac_address},{time},{speed},{lat},{long},{altitude},{sats},{temp},{pressure},{millivolts},{accel_x},{accel_y},{accel_z},{annotations}", file=f)
+                if last:
+                    break
                 speed -= decel_step
                 row_idx += 1
                 time += 100
