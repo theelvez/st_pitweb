@@ -115,7 +115,7 @@
                 const thisHeat = thisRowHeatElement.innerText;
                 if (curHeat != thisHeat) {
                     var newRow = document.createElement("tr");
-                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td>MPH @</td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td><td style='font-size:smaller;background-color:#002200'>MPH @</td>";
+                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td colspan=2>MPH @</td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].before(newRow);
                     var newHeader = document.createElement("tr");
@@ -126,12 +126,12 @@
                     "    <td>driver_name</td>" + 
                     "    <td>car_description</td>" + 
                     "    <td>max</td>" + 
+                    "    <td style='font-size:smaller'>finish</td>" + 
                     "    <td style='font-size:smaller'>60</td>" +
                     "    <td style='font-size:smaller'>100</td>" +
                     "    <td style='font-size:smaller'>150</td>" +
                     "    <td style='font-size:smaller'>200</td>" +
                     "    <td style='font-size:smaller'>top</td>" +
-                    "    <td style='font-size:smaller'>finish</td>" + 
                     "</tr>";
                     newHeader.classList.add("column_name");
                     newRow.after(newHeader);
@@ -190,13 +190,13 @@
             <td name="run">{{ item.run }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="car_description">{{ item.car_description }}</td>
-            <td style='color:{% if item.top_speed >= 200 %}limegreen{% else %}darkorange{% endif %}' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='color:darkorange' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
-            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
         </tr>
         {% endif %}
         {% endfor %}
@@ -211,13 +211,13 @@
             <td name="run">{{ item.run }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="car_description">{{ item.car_description }}</td>
-            <td style='color:{% if item.top_speed >= 200 %}limegreen{% else %}darkorange{% endif %}' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='color:darkorange' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
+            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
             <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
-            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
         </tr>
         {% endif %}
         {% endfor %}
