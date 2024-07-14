@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_sse import sse
 from sqlalchemy import desc, distinct, or_
 from time import sleep, ctime, time
-from threading import Event
+from threading import Event, Lock
 from typing import List
 import csv
 import os
@@ -12,6 +12,7 @@ import random
 app = Flask(__name__)
 
 db_update_event = Event()
+db_init_lock = Lock()
 
 # SQLite database configuration
 DB_NAME = "SVTdF-2024.sqlite"  # Replace with your SQLite database file name
@@ -123,8 +124,8 @@ class RunDataRow:
     annotations: str
     def __init__(self, mac_address, timestamp_ms, speed, lat, long, altitude, sats, temp, pressure, millivolts, accel_x, accel_y, accel_z, annotations):
             self.mac_address = mac_address
-            self.timestamp_ms = timestamp_ms
-            self.speed = speed
+            self.timestamp_ms = float(timestamp_ms)
+            self.speed = float(speed)
             self.lat = lat
             self.long = long
             self.altitude = altitude
@@ -174,6 +175,7 @@ def find_unmatched_uploads():
     return unmatched_uploads
 
 def init_database():
+    db_init_lock.acquire()
     if UploadTable.query.filter_by(upload_id = -1).count() <= 0:
         new_row = UploadTable(
             upload_id = -1,
@@ -205,11 +207,17 @@ def init_database():
             driver_name = "UNKNOWN",
             run_count = 0
         )
+        db.session.add(new_row)
+        db.session.commit()
     if DeviceTable.query.filter_by(device_id = 0).count() <= 0:
         new_row = DeviceTable(
             mac_address = "NONE",
             device_id = 0
         )
+        db.session.add(new_row)
+        db.session.commit()
+    db_init_lock.release()
+
 
 # ------------------------------------------------------------
 # /schedule
@@ -1118,6 +1126,8 @@ def assign_devices_to_runs():
             device_id = next_device_id
             car_dict[car_id] = device_id
             next_device_id += 1
+            if device_id == 0:
+                print("---------------------------------------------------------------")
             db.session.add(
                 DeviceAssignmentTable(
                     car_id = car_id,
@@ -1227,12 +1237,14 @@ def mac_address_to_device_and_car(mac_address):
 def get_current_heat():
     heat = 0
     found = False
-    while not found:
+    max_heat = RunTable.query.order_by(desc(RunTable.heat)).first().heat
+    while heat <= max_heat:
         heat += 1
         cur_heat_runs_without_results = RunTable.query.filter(RunTable.heat == heat, RunTable.upload_id == -1)
-        found = (cur_heat_runs_without_results.count() > 0)
+        if (cur_heat_runs_without_results.count() > 0):
+            return heat
 
-    return heat
+    return max_heat
 
 
 def find_run_result_to_update(mac_address):
@@ -1397,20 +1409,20 @@ def parse_raw_data(data):
 
         if (len(row) >= 14):
             rows.append(RunDataRow(
-                mac_address = row[0],
-                timestamp_ms = row[1],
-                speed = row[2],
-                lat = row[3],
-                long = row[4],
-                altitude = row[5],
-                sats = row[6],
-                temp = row[7],
-                pressure = row[8],
-                millivolts = row[9],
-                accel_x = row[10],
-                accel_y = row[11],
-                accel_z = row[12],
-                annotations = row[13],
+                mac_address = row[0].strip().upper(),
+                timestamp_ms = row[1].strip(),
+                speed = row[2].strip(),
+                lat = row[3].strip(),
+                long = row[4].strip(),
+                altitude = row[5].strip(),
+                sats = row[6].strip(),
+                temp = row[7].strip(),
+                pressure = row[8].strip(),
+                millivolts = row[9].strip(),
+                accel_x = row[10].strip(),
+                accel_y = row[11].strip(),
+                accel_z = row[12].strip(),
+                annotations = row[13].strip(),
             ))
 
     if len(rows) <= 0:
@@ -1518,6 +1530,14 @@ def apply_upload_to_run():
     db_update_event.set()
 
     return jsonify({"message": f"Applied upload_id {upload_id} to result_id {result_id}"}), 200
+
+@app.route("/get_config_file", methods=["POST"])
+def get_config_file():
+    config = None
+    with open("device_config.txt", 'r') as file:
+        config = file.read()
+
+    return config, 200
 
 
 def upload_run_data(raw_data):

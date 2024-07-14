@@ -105,10 +105,10 @@
 
         function runValidationChecks() {
 
-            var targetContainer = document.getElementById("target_div");
+            //var targetContainer = document.getElementById("target_div");
             var eventSource = new EventSource("/stream")
             eventSource.onmessage = function(e) {
-                targetContainer.innerHTML = e.data;
+                //targetContainer.innerHTML = e.data;
                 location.reload(true);
             };        
 
@@ -385,10 +385,9 @@
     </ul>
     <h1>SVTdF Schedule View</h1>
 <!-------------------------------------------------------->
-<div id="target_div"></div>
+<!--<div id="target_div"></div>-->
 <div class="SxS">
 <div class="column left">
-    <h3 class="table_title">Schedule</h3>
     <button class="button" type="button" onclick="emptyRunTable()">Delete Schedule</button>
     <button class="button" type="button" onclick="autoScheduleRemaining()">Auto-Schedule Remaining Runs</button>
     <button class="button" type="button" onclick="assignDevices()">Assign Devices To Runs</button>
