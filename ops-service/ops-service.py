@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, send_from_directory, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_sse import sse
 from sqlalchemy import desc, distinct, or_
@@ -1530,15 +1530,6 @@ def apply_upload_to_run():
     db_update_event.set()
 
     return jsonify({"message": f"Applied upload_id {upload_id} to result_id {result_id}"}), 200
-
-@app.route("/get_config_file", methods=["POST"])
-def get_config_file():
-    config = None
-    with open("device_config.txt", 'r') as file:
-        config = file.read()
-
-    return config, 200
-
 
 def upload_run_data(raw_data):
     data = raw_data.split("\n")

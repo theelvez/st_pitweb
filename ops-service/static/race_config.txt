@@ -1,0 +1,15 @@
+bamf_speed=0.00
+finishLine_left_lat=47.54567
+finishLine_left_lng=-122.05863
+finishLine_right_lat=47.54572
+finishLine_right_lng=-122.05863
+startLine_left_lat=47.54404
+startLine_left_lng=-122.04923
+startLine_right_lat=47.54415
+startLine_right_lng=-122.04913
+upload_server_ssid=st_pit
+upload_server_password=sp33dtrack3r
+upload_server_url=http://192.168.0.15:80/upload_run_data
+battery_report_voltage=0
+upload_server_block_on_upload=1
+pressure_baseline=1010.0
