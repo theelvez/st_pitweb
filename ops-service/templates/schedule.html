@@ -263,7 +263,7 @@
             }
         }
         function postOnly(path, body) {
-            fetch("http://localhost/" + path, {
+            fetch(window.location.origin + "/" + path, {
                 method: "POST",
                 body: "" + body,
                 headers: { "Content-type": "text/plain" }
@@ -273,7 +273,7 @@
             });
         }
         function postAndReload(path, body) {
-            fetch("http://localhost/" + path, {
+            fetch(window.location.origin + "/" + path, {
                 method: "POST",
                 body: "" + body,
                 headers: { "Content-type": "text/plain" }

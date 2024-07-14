@@ -1358,15 +1358,18 @@ def find_finish_speed(rows: List[RunDataRow], index_of_0: int) -> float:
 
     return float(rows[len(rows) - 1].speed)
 
-def get_top_speed(rows):
-    time = 0.0
-    speed = 0.0
-    for row in rows:
-        if float(row.speed) > speed:
-            time = float(row.timestamp_ms)
-            speed = float(row.speed)
+def get_top_speed(rows: List[RunDataRow],index_of_0):
+    index = len(rows)
+    index_of_top = index-1
+    while index >= index_of_0:
+        index -= 1
+        if float(rows[index].speed) > rows[index_of_top].speed:
+            index_of_top = index
     
-    return (time / 1000.0), speed
+    top_speed = rows[index_of_top].speed
+    time_to_top = rows[index_of_top].timestamp_ms - rows[index_of_0].timestamp_ms
+
+    return (time_to_top / 1000.0), top_speed
 
 def round_to_hundredths(value: float):
     hundredths = int((value + 0.005) * 100)
@@ -1383,7 +1386,7 @@ def process_log_file(rows) -> UploadTable:
     time_to_150, found_150 = calculate_timestamp_of_speed(rows, index_of_0, 150.0)
     time_to_200, found_200 = calculate_timestamp_of_speed(rows, index_of_0, 200.0)
     speed_at_finish = find_finish_speed(rows, index_of_0)
-    time_to_top_speed, top_speed = get_top_speed(rows)
+    time_to_top_speed, top_speed = get_top_speed(rows, index_of_0)
 
     return UploadTable(
         time_to_60 =        round_to_hundredths(time_to_60),
