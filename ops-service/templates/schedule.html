@@ -79,6 +79,18 @@
         }
     </style>
     <script>
+        function GetURLParameter(sParam) {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++) 
+            {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam) 
+                {
+                    return sParameterName[1];
+                }
+            }
+        }
         function logTableError(which, message) {
             document.getElementById(which).innerText += message 
             document.getElementById(which).innerHTML += "<br>"
@@ -93,9 +105,9 @@
             return "run-count-ok";
         }
 
-        function clearRun(run_number) {
-            if (prompt("Delete all runs in heat " + run_number + "?")) {
-
+        function clearHeat(heat_number) {
+            if (window.confirm("Delete all runs in heat " + heat_number + "?")) {
+                postAndReload("clear_heat", "" + heat_number)
             }
         }
 
@@ -110,7 +122,13 @@
             eventSource.onmessage = function(e) {
                 //targetContainer.innerHTML = e.data;
                 location.reload(true);
-            };        
+            };
+            
+            nxt = GetURLParameter("next_id")
+            if (nxt != undefined)
+            {
+                document.getElementById("next_upload_device_id").innerText = nxt
+            }
 
             const rows = document.getElementsByName('schedule_row');
 
@@ -231,7 +249,7 @@
             {
                 var newRow = document.createElement("tr");
                 var runCount = heat_run_count.get(1);
-                newRow.innerHTML = "<td colspan=10>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearRun(1)'>Clear Heat</button></td>";
+                newRow.innerHTML = "<td colspan=11>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearHeat(1)'>Clear Heat</button></td>";
                 newRow.style.backgroundColor = "#000022"
                 header.before(newRow);
             }
@@ -246,11 +264,11 @@
                 if (nextHeatElement === undefined) {
                     continue;
                 }
-                const nextHeat = nextHeatElement.innerText;
+                const nextHeat = parseInt(nextHeatElement.innerText);
                 if (curHeat != nextHeat) {
                     var newRow = document.createElement("tr");
                     var runCount = heat_run_count.get(parseInt(nextHeat));
-                    newRow.innerHTML = "<td colspan=10>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearRun(" + nextHeat + ")'>Clear Heat</button></td>";
+                    newRow.innerHTML = "<td colspan=11>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearHeat(" + nextHeat + ")'>Clear Heat</button></td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].after(newRow);
                     var newHeader = document.createElement("tr");
@@ -258,7 +276,7 @@
                     newHeader.classList.add("column_name");
                     newRow.after(newHeader);
 
-                    curHeat++;
+                    curHeat = nextHeat;
                 }
             }
         }
@@ -314,7 +332,7 @@
             postAndReload("move_run_from_to", "" + result_id + ",0,0");
         }
         function emptyRunTable() {
-            if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!\nIt will then generate an inital schedule of runs based on driver and car information")) {
+            if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!")) {
                 postAndReload("empty_run_table", "");
             }
         }
@@ -371,6 +389,28 @@
                 top_speed + "," +
                 upload_id);
         }
+        function testUploadResult() {
+            var next_id_element = document.getElementById("next_upload_device_id")
+            const next_id = parseInt(next_id_element.innerText)
+            next_id_element.innerText = next_id + 1
+
+            postAndReloadWithIncrement("upload_test_log", "" + next_id)            
+        }
+        function postAndReloadWithIncrement(path, body) {
+            url = window.location.origin + "/" + path
+            fetch(url, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+                parts = window.location.href.split('?')
+                newHref = parts[0] + "?next_id=" + (document.getElementById("next_upload_device_id").innerText)
+                location.replace(newHref);
+            });
+        }
+
     </script>
     <link rel="shortcut icon" href="../static/logo.png">
 </head>
@@ -433,6 +473,10 @@
     <div id="schedule_errors" style="font-family:monospace"></div>
 </div>
 <div class="column right">
+    <div>
+        next upload device id: <span id="next_upload_device_id">0</span>
+        <button class="button" type="button" onclick="testUploadResult()">Upload</button><BR>
+    </div>
     <h3 class="table_title">Unscheduled Drivers</h3>
     <table>
         <table style="font-family:monospace">

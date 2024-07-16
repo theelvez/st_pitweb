@@ -2,13 +2,7 @@
 <html>
 <!-- Results generate at {{ timestamp }} -->
 <head>
-    <title>SVTdF Results 2024</title>
-    {% if for_public_site %}
-    <!-- public website version -->
-    <meta http-equiv="refresh" content="15">
-    {% else %}
-    <!-- pit website version -->
-    {% endif %}
+    <title>SVTdF Speedtracker Devices</title>
     <style>
         body {
             background-color: #1F1F1F;
@@ -82,19 +76,6 @@
         }
     </style>
     <script>
-        function GetURLParameter(sParam) {
-            var sPageURL = window.location.search.substring(1);
-            var sURLVariables = sPageURL.split('&');
-            for (var i = 0; i < sURLVariables.length; i++) 
-            {
-                var sParameterName = sURLVariables[i].split('=');
-                if (sParameterName[0] == sParam) 
-                {
-                    return sParameterName[1];
-                }
-            }
-        }
-
         function parseRgbColor(colorString) {
             m = colorString.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
             if (m) {
@@ -111,8 +92,6 @@
         }
 
         function runValidationChecks() {
-
-{% if not for_public_site %}
             //
             // hook up server-side event to trigger a reload when the database is updated
             //
@@ -120,22 +99,35 @@
             eventSource.onmessage = function(e) {
                 location.reload(true);
             };        
-{% endif %}
-            
+            const rows = document.getElementsByName('schedule_row');
+            //
+            // fill in "next_run" column
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const thisHeat = parseInt(rows[i].children.namedItem('heat').innerText);
+                const thisRun = parseInt(rows[i].children.namedItem('run').innerText);
+                const thisDevice = parseInt(rows[i].children.namedItem('device_id').innerText);
+                nextRun = "";
+                for (let j = i+1; j < rows.length; j++) {
+                    const device = parseInt(rows[j].children.namedItem('device_id').innerText);
+                    if (device == thisDevice) {
+                        const heat = parseInt(rows[j].children.namedItem('heat').innerText);
+                        const run = parseInt(rows[j].children.namedItem('run').innerText);
+                        nextRun = "&nbsp;" + heat + "-" + run;
+                        break;
+                    }
+                }
+                rows[i].children.namedItem('next_run').innerHTML = nextRun;
+            }
             //
             // Insert space between heats
             //
-            const rows = document.getElementsByName('schedule_row');
             var curHeat = 0;
             for (let i = 0; i < rows.length; i++) {
                 thisRowHeatElement = rows[i].children.namedItem('heat');
                 const thisHeat = parseInt(thisRowHeatElement.innerText);
                 thisRowRunElement = rows[i].children.namedItem('run');
                 const thisRun = parseInt(thisRowRunElement.innerText);
-
-                const isTopResult = 
-                    (thisHeat == {{ highest_speed_heat }}) &&
-                    (thisRun == {{ highest_speed_run }});
 
                 //
                 // highlight current heat
@@ -145,20 +137,9 @@
                     rows[i].style.backgroundColor = addColor(curBackColor, 10, 30, 0);
                 }
 
-                //
-                // highlight top result
-                //
-                if (isTopResult) {
-                    const curBackColor = window.getComputedStyle(rows[i]).backgroundColor;
-                    rows[i].style.backgroundColor = "rgb(72,123,26)";
-                    rows[i].style.color = "rgb(0,0,0)";
-                    topSpeedElement = rows[i].children.namedItem('top_speed');
-                    topSpeedElement.style.color = "rgb(110,20,0)";
-                }
-
                 if (curHeat != thisHeat) {
                     var newRow = document.createElement("tr");
-                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td colspan=2>MPH at</td><td></td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td>";
+                    newRow.innerHTML = "<td colspan=8>Heat " + thisHeat + " </td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].before(newRow);
                     var newHeader = document.createElement("tr");
@@ -168,14 +149,10 @@
                     "    <td>run</td>" + 
                     "    <td>driver_name</td>" + 
                     "    <td>car_description</td>" + 
-                    "    <td>top</td>" + 
-                    "    <td style='font-size:smaller'>finish</td>" + 
-                    "    <td>&nbsp;</td>" + 
-                    "    <td style='font-size:smaller'>60</td>" +
-                    "    <td style='font-size:smaller'>100</td>" +
-                    "    <td style='font-size:smaller'>150</td>" +
-                    "    <td style='font-size:smaller'>200</td>" +
-                    "    <td style='font-size:smaller'>top</td>" +
+                    "    <td>car_plate</td>" + 
+                    "    <td>mac_address</td>" + 
+                    "    <td>device_id</td>" + 
+                    "    <td>next_run</td>" + 
                     "</tr>";
                     newHeader.classList.add("column_name");
                     newRow.after(newHeader);
@@ -188,56 +165,24 @@
     <link rel="shortcut icon" href="../static/logo.png">
 </head>
 <body onload="runValidationChecks()">
-    <link rel="icon" type="image/png" href="/logo.png" />
-<!-------------------------------------------------------->
-<div style="color:red">
-    {% for error in errors %}
-    {{ error }}<br>
-    {% endfor %}
+<div>
+    Device Status as of {{ timestamp }}
 </div>
 <div>
     <div class="SxS">
     <div class="column left">
     <table id="schedule_view_left" style="font-family:monospace">
         {% for item in schedule %}
-        {% if item.heat <= 5 %}
         <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
             <td name="heat">{{ item.heat }}</td>
             <td name="run">{{ item.run }}</td>
             <td name="driver_name">{{ item.driver_name }}</td>
             <td name="car_description">{{ item.car_description }}</td>
-            <td style='color:darkorange' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
-            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
+            <td name="car_plate">&nbsp;{{ item.car_plate }}&nbsp;</td>
+            <td name="mac_address">&nbsp;{{ item.mac_address }}&nbsp;</td>
+            <td name="device_id">&nbsp;{{ item.device_id }}</td>
+            <td name="next_run"></td>
         </tr>
-        {% endif %}
-        {% endfor %}
-    </table>
-    </div>
-    <div class="column right">
-    <table id="schedule_view_right" style="font-family:monospace">
-        {% for item in schedule %}
-        {% if item.heat > 5 %}
-        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
-            <td name="heat">{{ item.heat }}</td>
-            <td name="run">{{ item.run }}</td>
-            <td name="driver_name">{{ item.driver_name }}</td>
-            <td name="car_description">{{ item.car_description }}</td>
-            <td style='color:darkorange' name="top_speed">{% if item.top_speed != 0 %} {{ item.top_speed }}{% endif %}</td>
-            <td style='font-size:smaller' name="speed_at_finish">{% if item.speed_at_finish != 0 %}{{ item.speed_at_finish }}{% endif %}</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">{% if item.time_to_60 != 0 %}{{ item.time_to_60 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_100">{% if item.time_to_100 != 0 %}{{ item.time_to_100 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_150">{% if item.time_to_150 != 0 %}{{ item.time_to_150 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_200">{% if item.time_to_200 != 0 %}{{ item.time_to_200 }}{% endif %}</td>
-            <td style='font-size:smaller' name="time_to_top_speed">{% if item.time_to_top_speed != 0 %}{{ item.time_to_top_speed }}{% endif %}</td>
-        </tr>
-        {% endif %}
         {% endfor %}
     </table>
     </div>

@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html>
+<!-- Results generate at Mon Jul 15 14:23:33 2024 -->
 <head>
-    <title>SVTdF Results View</title>
+    <title>SVTdF Results 2024</title>
+    
+    <!-- public website version -->
+    <meta http-equiv="refresh" content="15">
+    
     <style>
         body {
             background-color: #1F1F1F;
@@ -61,11 +66,9 @@
         }
         .left {
             overflow-x: visible;
-            height: 85vh
         }
         .right {
             overflow-x: visible;
-            height: 85vh
         }
         .SxS:after {
             content: "";
@@ -90,32 +93,62 @@
             }
         }
 
+        function parseRgbColor(colorString) {
+            m = colorString.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+            if (m) {
+                return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+            }
+        }
+
+        function addColor(colorStr, r, g, b) {
+            color = parseRgbColor(colorStr);
+            color[0] = Math.min(color[0] + r, 255);
+            color[1] = Math.min(color[1] + g, 255);
+            color[2] = Math.min(color[2] + b, 255);
+            return "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")";
+        }
+
         function runValidationChecks() {
 
-            var eventSource = new EventSource("/stream")
-            eventSource.onmessage = function(e) {
-                location.reload(true);
-            };        
 
-            nxt = GetURLParameter("next_id")
-            if (nxt != undefined)
-            {
-                document.getElementById("next_upload_car_id").innerText = nxt
-            }
-
-///*
+            
             //
             // Insert space between heats
             //
             const rows = document.getElementsByName('schedule_row');
-            //const header = document.getElementById('schedule_view_header');
             var curHeat = 0;
             for (let i = 0; i < rows.length; i++) {
                 thisRowHeatElement = rows[i].children.namedItem('heat');
-                const thisHeat = thisRowHeatElement.innerText;
+                const thisHeat = parseInt(thisRowHeatElement.innerText);
+                thisRowRunElement = rows[i].children.namedItem('run');
+                const thisRun = parseInt(thisRowRunElement.innerText);
+
+                const isTopResult = 
+                    (thisHeat == 2) &&
+                    (thisRun == 4);
+
+                //
+                // highlight current heat
+                //
+                if (thisHeat == 5) {
+                    const curBackColor = window.getComputedStyle(rows[i]).backgroundColor;
+                    rows[i].style.backgroundColor = addColor(curBackColor, 10, 30, 0);
+                }
+
+                //
+                // highlight top result
+                //
+                if (isTopResult) {
+                    const curBackColor = window.getComputedStyle(rows[i]).backgroundColor;
+                    rows[i].style.backgroundColor = "rgb(72,123,26)";
+                    rows[i].style.color = "rgb(0,0,0)";
+                    topSpeedElement = rows[i].children.namedItem('top_speed');
+                    topSpeedElement.style.color = "rgb(110,20,0)";
+                }
+
                 if (curHeat != thisHeat) {
                     var newRow = document.createElement("tr");
-                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td colspan=2>MPH @</td><td></td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td>";
+                    newRow.innerHTML = "<td colspan=4>Heat " + thisHeat + " </td><td colspan=2>MPH at</td><td></td><td style='background-color:#002200;font-size:smaller' colspan=5>Seconds To</td>";
                     newRow.style.backgroundColor = "#000022"
                     rows[i].before(newRow);
                     var newHeader = document.createElement("tr");
@@ -125,9 +158,9 @@
                     "    <td>run</td>" + 
                     "    <td>driver_name</td>" + 
                     "    <td>car_description</td>" + 
-                    "    <td>max</td>" + 
+                    "    <td>top</td>" + 
                     "    <td style='font-size:smaller'>finish</td>" + 
-                    "    <td>&nbsp;&nbsp;&nbsp;</td>" + 
+                    "    <td>&nbsp;</td>" + 
                     "    <td style='font-size:smaller'>60</td>" +
                     "    <td style='font-size:smaller'>100</td>" +
                     "    <td style='font-size:smaller'>150</td>" +
@@ -140,11 +173,11 @@
                     curHeat = thisHeat;
                 }
             }
-//*/
         }
 
         function postAndReload(path, body) {
-            fetch(window.location.origin + "/" + path, {
+            url = window.location.origin + "/" + path
+            fetch(url, {
                 method: "POST",
                 body: "" + body,
                 headers: { "Content-type": "text/plain" }
@@ -174,6 +207,12 @@
 <div style="color:red">
     
 </div>
+<!--
+<div>
+    next upload car id: <span id="next_upload_car_id">0</span>
+    <button class="button" type="button" onclick="uploadResult()">Upload</button><BR>
+</div>
+-->
 <div>
     <div class="SxS">
     <div class="column left">
@@ -185,14 +224,14 @@
             <td name="run">1</td>
             <td name="driver_name">Dave Stone</td>
             <td name="car_description">TBD-DaveStone-1</td>
-            <td style='color:darkorange' name="top_speed"> 175.32</td>
-            <td style='font-size:smaller' name="speed_at_finish">102.23</td>
+            <td style='color:darkorange' name="top_speed"> 141.14</td>
+            <td style='font-size:smaller' name="speed_at_finish">127.11</td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">33.27</td>
-            <td style='font-size:smaller' name="time_to_100">55.44</td>
-            <td style='font-size:smaller' name="time_to_150">83.16</td>
+            <td style='font-size:smaller' name="time_to_60">42.82</td>
+            <td style='font-size:smaller' name="time_to_100">72.83</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.2</td>
+            <td style='font-size:smaller' name="time_to_top_speed">103.7</td>
         </tr>
         
         
@@ -200,16 +239,16 @@
         <tr name="schedule_row" id="schedule_row_1-2">
             <td name="heat">1</td>
             <td name="run">2</td>
-            <td name="driver_name">John Frey</td>
-            <td name="car_description">1992 Porsche 911 Singer Turbo</td>
-            <td style='color:darkorange' name="top_speed"> 144.11</td>
-            <td style='font-size:smaller' name="speed_at_finish">102.33</td>
+            <td name="driver_name">Kevin LaChapelle</td>
+            <td name="car_description">2020 Audi R8</td>
+            <td style='color:darkorange' name="top_speed"> 187.13</td>
+            <td style='font-size:smaller' name="speed_at_finish">168.62</td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">41.26</td>
-            <td style='font-size:smaller' name="time_to_100">68.77</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_60">28.54</td>
+            <td style='font-size:smaller' name="time_to_100">48.57</td>
+            <td style='font-size:smaller' name="time_to_150">73.61</td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.1</td>
+            <td style='font-size:smaller' name="time_to_top_speed">92.2</td>
         </tr>
         
         
@@ -217,8 +256,569 @@
         <tr name="schedule_row" id="schedule_row_1-3">
             <td name="heat">1</td>
             <td name="run">3</td>
+            <td name="driver_name">John Frey</td>
+            <td name="car_description">1992 Porsche 911 Singer Turbo</td>
+            <td style='color:darkorange' name="top_speed"> 173.41</td>
+            <td style='font-size:smaller' name="speed_at_finish">156.16</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">30.26</td>
+            <td style='font-size:smaller' name="time_to_100">51.44</td>
+            <td style='font-size:smaller' name="time_to_150">77.91</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">90.3</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_1-4">
+            <td name="heat">1</td>
+            <td name="run">4</td>
+            <td name="driver_name">Anders Hainer</td>
+            <td name="car_description">2023 McLaren Artura</td>
+            <td style='color:darkorange' name="top_speed"> 130.03</td>
+            <td style='font-size:smaller' name="speed_at_finish">117.06</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">47.57</td>
+            <td style='font-size:smaller' name="time_to_100">80.94</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">106.0</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_1-5">
+            <td name="heat">1</td>
+            <td name="run">5</td>
+            <td name="driver_name">Gabriel Vega</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 198.31</td>
+            <td style='font-size:smaller' name="speed_at_finish">178.6</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">31.71</td>
+            <td style='font-size:smaller' name="time_to_100">53.92</td>
+            <td style='font-size:smaller' name="time_to_150">81.68</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">108.5</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_1-6">
+            <td name="heat">1</td>
+            <td name="run">6</td>
+            <td name="driver_name">Karl Brauer</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 109.86</td>
+            <td style='font-size:smaller' name="speed_at_finish">98.94</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">57.95</td>
+            <td style='font-size:smaller' name="time_to_100">98.59</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">108.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_1-7">
+            <td name="heat">1</td>
+            <td name="run">7</td>
+            <td name="driver_name">Seyth Miersma</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 116.69</td>
+            <td style='font-size:smaller' name="speed_at_finish">105.19</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">45.93</td>
+            <td style='font-size:smaller' name="time_to_100">78.15</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">91.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_1-8">
+            <td name="heat">1</td>
+            <td name="run">8</td>
+            <td name="driver_name">Bruno Senna</td>
+            <td name="car_description">2019 McLaren Senna</td>
+            <td style='color:darkorange' name="top_speed"> 162.29</td>
+            <td style='font-size:smaller' name="speed_at_finish">146.28</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">32.31</td>
+            <td style='font-size:smaller' name="time_to_100">54.99</td>
+            <td style='font-size:smaller' name="time_to_150">83.34</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">90.3</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-1">
+            <td name="heat">2</td>
+            <td name="run">1</td>
+            <td name="driver_name">Bruno Senna</td>
+            <td name="car_description">2019 McLaren Senna</td>
+            <td style='color:darkorange' name="top_speed"> 162.29</td>
+            <td style='font-size:smaller' name="speed_at_finish">146.28</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">32.31</td>
+            <td style='font-size:smaller' name="time_to_100">54.99</td>
+            <td style='font-size:smaller' name="time_to_150">83.34</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">90.3</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-2">
+            <td name="heat">2</td>
+            <td name="run">2</td>
+            <td name="driver_name">John Sercu</td>
+            <td name="car_description">2018 Ferrari 488 Spider</td>
+            <td style='color:darkorange' name="top_speed"> 105.82</td>
+            <td style='font-size:smaller' name="speed_at_finish">95.33</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">54.81</td>
+            <td style='font-size:smaller' name="time_to_100">93.21</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">98.8</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-3">
+            <td name="heat">2</td>
+            <td name="run">3</td>
+            <td name="driver_name">Scott Sherwood</td>
+            <td name="car_description">2019 McLaren Senna</td>
+            <td style='color:darkorange' name="top_speed"> 163.1</td>
+            <td style='font-size:smaller' name="speed_at_finish">146.92</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">34.32</td>
+            <td style='font-size:smaller' name="time_to_100">58.41</td>
+            <td style='font-size:smaller' name="time_to_150">88.51</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">96.4</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-4">
+            <td name="heat">2</td>
+            <td name="run">4</td>
+            <td name="driver_name">Tom Ellison</td>
+            <td name="car_description">2018 Porsche 911</td>
+            <td style='color:darkorange' name="top_speed"> 207.79</td>
+            <td style='font-size:smaller' name="speed_at_finish">187.04</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">26.93</td>
+            <td style='font-size:smaller' name="time_to_100">45.81</td>
+            <td style='font-size:smaller' name="time_to_150">69.42</td>
+            <td style='font-size:smaller' name="time_to_200">93.02</td>
+            <td style='font-size:smaller' name="time_to_top_speed">96.7</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-5">
+            <td name="heat">2</td>
+            <td name="run">5</td>
+            <td name="driver_name">Ross Garber</td>
+            <td name="car_description">1967 Lamborghini Miura</td>
+            <td style='color:darkorange' name="top_speed"> 190.76</td>
+            <td style='font-size:smaller' name="speed_at_finish">171.93</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">31.08</td>
+            <td style='font-size:smaller' name="time_to_100">52.86</td>
+            <td style='font-size:smaller' name="time_to_150">80.1</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">102.3</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-6">
+            <td name="heat">2</td>
+            <td name="run">6</td>
+            <td name="driver_name">Jereme Pohill</td>
+            <td name="car_description">2019 McLaren Senna</td>
+            <td style='color:darkorange' name="top_speed"> 151.79</td>
+            <td style='font-size:smaller' name="speed_at_finish">136.67</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">36.2</td>
+            <td style='font-size:smaller' name="time_to_100">61.61</td>
+            <td style='font-size:smaller' name="time_to_150">93.36</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">94.5</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-7">
+            <td name="heat">2</td>
+            <td name="run">7</td>
+            <td name="driver_name">McLaren Houston</td>
+            <td name="car_description">TBD</td>
+            <td style='color:darkorange' name="top_speed"> 110.65</td>
+            <td style='font-size:smaller' name="speed_at_finish">99.63</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">60.51</td>
+            <td style='font-size:smaller' name="time_to_100">102.91</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">114.2</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_2-8">
+            <td name="heat">2</td>
+            <td name="run">8</td>
+            <td name="driver_name">Sergio Pena</td>
+            <td name="car_description">2024 Aston Martin DBX707</td>
+            <td style='color:darkorange' name="top_speed"> 114.2</td>
+            <td style='font-size:smaller' name="speed_at_finish">102.95</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">58.26</td>
+            <td style='font-size:smaller' name="time_to_100">99.11</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">113.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-1">
+            <td name="heat">3</td>
+            <td name="run">1</td>
+            <td name="driver_name">Sergio Pena</td>
+            <td name="car_description">2024 Aston Martin DB12 Volante</td>
+            <td style='color:darkorange' name="top_speed"> 125.35</td>
+            <td style='font-size:smaller' name="speed_at_finish">112.88</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">41.89</td>
+            <td style='font-size:smaller' name="time_to_100">71.28</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">89.9</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-2">
+            <td name="heat">3</td>
+            <td name="run">2</td>
+            <td name="driver_name">Scott Mosier</td>
+            <td name="car_description">2018 Porsche 911 GT3</td>
+            <td style='color:darkorange' name="top_speed"> 156.45</td>
+            <td style='font-size:smaller' name="speed_at_finish">140.93</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">42.82</td>
+            <td style='font-size:smaller' name="time_to_100">72.84</td>
+            <td style='font-size:smaller' name="time_to_150">110.36</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">115.2</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-3">
+            <td name="heat">3</td>
+            <td name="run">3</td>
+            <td name="driver_name">Craig Mungary</td>
+            <td name="car_description">2017 Mclaren 570 S</td>
+            <td style='color:darkorange' name="top_speed"> 141.35</td>
+            <td style='font-size:smaller' name="speed_at_finish">127.36</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">39.94</td>
+            <td style='font-size:smaller' name="time_to_100">67.9</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">96.8</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-4">
+            <td name="heat">3</td>
+            <td name="run">4</td>
+            <td name="driver_name">Blake McDonald</td>
+            <td name="car_description">2022 Mclaren 765 LT</td>
+            <td style='color:darkorange' name="top_speed"> 127.09</td>
+            <td style='font-size:smaller' name="speed_at_finish">114.51</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">41.66</td>
+            <td style='font-size:smaller' name="time_to_100">70.84</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">90.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-5">
+            <td name="heat">3</td>
+            <td name="run">5</td>
+            <td name="driver_name">Todd Campbell</td>
+            <td name="car_description">2022 Porsche 911 Turbo S</td>
+            <td style='color:darkorange' name="top_speed"> 189.44</td>
+            <td style='font-size:smaller' name="speed_at_finish">170.55</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">32.92</td>
+            <td style='font-size:smaller' name="time_to_100">56.0</td>
+            <td style='font-size:smaller' name="time_to_150">84.85</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">107.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-6">
+            <td name="heat">3</td>
+            <td name="run">6</td>
+            <td name="driver_name">Jeremy Hixson</td>
+            <td name="car_description">2023 BMW M3 Competition</td>
+            <td style='color:darkorange' name="top_speed"> 156.81</td>
+            <td style='font-size:smaller' name="speed_at_finish">141.27</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">33.92</td>
+            <td style='font-size:smaller' name="time_to_100">57.67</td>
+            <td style='font-size:smaller' name="time_to_150">87.36</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">91.4</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-7">
+            <td name="heat">3</td>
+            <td name="run">7</td>
+            <td name="driver_name">Dave Concannon</td>
+            <td name="car_description">2009 Porsche 911</td>
+            <td style='color:darkorange' name="top_speed"> 132.01</td>
+            <td style='font-size:smaller' name="speed_at_finish">118.84</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">44.38</td>
+            <td style='font-size:smaller' name="time_to_100">75.49</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">100.4</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_3-8">
+            <td name="heat">3</td>
+            <td name="run">8</td>
+            <td name="driver_name">Steve Haywood</td>
+            <td name="car_description">2018 Porsche GT3</td>
+            <td style='color:darkorange' name="top_speed"> 170.21</td>
+            <td style='font-size:smaller' name="speed_at_finish">153.23</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">34.23</td>
+            <td style='font-size:smaller' name="time_to_100">58.24</td>
+            <td style='font-size:smaller' name="time_to_150">88.27</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">100.4</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-1">
+            <td name="heat">4</td>
+            <td name="run">1</td>
+            <td name="driver_name">Dave Stone</td>
+            <td name="car_description">TBD-DaveStone-2</td>
+            <td style='color:darkorange' name="top_speed"> 158.32</td>
+            <td style='font-size:smaller' name="speed_at_finish">142.59</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">42.52</td>
+            <td style='font-size:smaller' name="time_to_100">72.33</td>
+            <td style='font-size:smaller' name="time_to_150">109.6</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">115.8</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-2">
+            <td name="heat">4</td>
+            <td name="run">2</td>
             <td name="driver_name">Kevin LaChapelle</td>
             <td name="car_description">2020 Audi R8</td>
+            <td style='color:darkorange' name="top_speed"> 187.13</td>
+            <td style='font-size:smaller' name="speed_at_finish">168.62</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">28.54</td>
+            <td style='font-size:smaller' name="time_to_100">48.57</td>
+            <td style='font-size:smaller' name="time_to_150">73.61</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">92.2</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-3">
+            <td name="heat">4</td>
+            <td name="run">3</td>
+            <td name="driver_name">John Frey</td>
+            <td name="car_description">1992 Porsche 911 Singer Turbo</td>
+            <td style='color:darkorange' name="top_speed"> 173.41</td>
+            <td style='font-size:smaller' name="speed_at_finish">156.16</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">30.26</td>
+            <td style='font-size:smaller' name="time_to_100">51.44</td>
+            <td style='font-size:smaller' name="time_to_150">77.91</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">90.3</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-4">
+            <td name="heat">4</td>
+            <td name="run">4</td>
+            <td name="driver_name">Anders Hainer</td>
+            <td name="car_description">2023 McLaren Artura</td>
+            <td style='color:darkorange' name="top_speed"> 130.03</td>
+            <td style='font-size:smaller' name="speed_at_finish">117.06</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">47.57</td>
+            <td style='font-size:smaller' name="time_to_100">80.94</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">106.0</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-5">
+            <td name="heat">4</td>
+            <td name="run">5</td>
+            <td name="driver_name">Gabriel Vega</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 198.31</td>
+            <td style='font-size:smaller' name="speed_at_finish">178.6</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">31.71</td>
+            <td style='font-size:smaller' name="time_to_100">53.92</td>
+            <td style='font-size:smaller' name="time_to_150">81.68</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">108.5</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-6">
+            <td name="heat">4</td>
+            <td name="run">6</td>
+            <td name="driver_name">Karl Brauer</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 109.86</td>
+            <td style='font-size:smaller' name="speed_at_finish">98.94</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">57.95</td>
+            <td style='font-size:smaller' name="time_to_100">98.59</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">108.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-7">
+            <td name="heat">4</td>
+            <td name="run">7</td>
+            <td name="driver_name">Seyth Miersma</td>
+            <td name="car_description">McLaren 750S</td>
+            <td style='color:darkorange' name="top_speed"> 116.69</td>
+            <td style='font-size:smaller' name="speed_at_finish">105.19</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">45.93</td>
+            <td style='font-size:smaller' name="time_to_100">78.15</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">91.6</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_4-8">
+            <td name="heat">4</td>
+            <td name="run">8</td>
+            <td name="driver_name">Rick Nelson</td>
+            <td name="car_description">2018 Ferrari 488 Spider</td>
+            <td style='color:darkorange' name="top_speed"> 105.82</td>
+            <td style='font-size:smaller' name="speed_at_finish">95.33</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">54.81</td>
+            <td style='font-size:smaller' name="time_to_100">93.21</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">98.8</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_5-1">
+            <td name="heat">5</td>
+            <td name="run">1</td>
+            <td name="driver_name">John Sercu</td>
+            <td name="car_description">2018 Ferrari 488 Spider</td>
+            <td style='color:darkorange' name="top_speed"> 105.82</td>
+            <td style='font-size:smaller' name="speed_at_finish">95.33</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">54.81</td>
+            <td style='font-size:smaller' name="time_to_100">93.21</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">98.8</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_5-2">
+            <td name="heat">5</td>
+            <td name="run">2</td>
+            <td name="driver_name">Scott Sherwood</td>
+            <td name="car_description">2019 McLaren Senna</td>
+            <td style='color:darkorange' name="top_speed"> 163.1</td>
+            <td style='font-size:smaller' name="speed_at_finish">146.92</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">34.32</td>
+            <td style='font-size:smaller' name="time_to_100">58.41</td>
+            <td style='font-size:smaller' name="time_to_150">88.51</td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">96.4</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_5-3">
+            <td name="heat">5</td>
+            <td name="run">3</td>
+            <td name="driver_name">McLaren Houston</td>
+            <td name="car_description">TBD</td>
+            <td style='color:darkorange' name="top_speed"> 110.65</td>
+            <td style='font-size:smaller' name="speed_at_finish">99.63</td>
+            <td></td>
+            <td style='font-size:smaller' name="time_to_60">60.51</td>
+            <td style='font-size:smaller' name="time_to_100">102.91</td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed">114.2</td>
+        </tr>
+        
+        
+        
+        <tr name="schedule_row" id="schedule_row_5-4">
+            <td name="heat">5</td>
+            <td name="run">4</td>
+            <td name="driver_name">Brad Green</td>
+            <td name="car_description">2014 Porsche 911 Turbo</td>
             <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
@@ -231,563 +831,19 @@
         
         
         
-        <tr name="schedule_row" id="schedule_row_1-4">
-            <td name="heat">1</td>
-            <td name="run">4</td>
-            <td name="driver_name">Gabriel Vega</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 170.98</td>
-            <td style='font-size:smaller' name="speed_at_finish">169.0</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">38.71</td>
-            <td style='font-size:smaller' name="time_to_100">64.51</td>
-            <td style='font-size:smaller' name="time_to_150">96.77</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.3</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_1-5">
-            <td name="heat">1</td>
-            <td name="run">5</td>
-            <td name="driver_name">Karl Brauer</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 175.32</td>
-            <td style='font-size:smaller' name="speed_at_finish">103.33</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">33.27</td>
-            <td style='font-size:smaller' name="time_to_100">55.44</td>
-            <td style='font-size:smaller' name="time_to_150">83.16</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.2</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_1-6">
-            <td name="heat">1</td>
-            <td name="run">6</td>
-            <td name="driver_name">Seyth Miersma</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 103.2</td>
-            <td style='font-size:smaller' name="speed_at_finish">98.32</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">57.56</td>
-            <td style='font-size:smaller' name="time_to_100">95.93</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_1-7">
-            <td name="heat">1</td>
-            <td name="run">7</td>
-            <td name="driver_name">Bruno Senna</td>
-            <td name="car_description">2019 McLaren Senna</td>
-            <td style='color:darkorange' name="top_speed"> 184.72</td>
-            <td style='font-size:smaller' name="speed_at_finish">111.27</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">35.73</td>
-            <td style='font-size:smaller' name="time_to_100">59.55</td>
-            <td style='font-size:smaller' name="time_to_150">89.32</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-1">
-            <td name="heat">2</td>
-            <td name="run">1</td>
-            <td name="driver_name">Bruno Senna</td>
-            <td name="car_description">2019 McLaren Senna</td>
-            <td style='color:darkorange' name="top_speed"> 161.33</td>
-            <td style='font-size:smaller' name="speed_at_finish">145.23</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.75</td>
-            <td style='font-size:smaller' name="time_to_100">61.24</td>
-            <td style='font-size:smaller' name="time_to_150">91.86</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">98.8</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-2">
-            <td name="heat">2</td>
-            <td name="run">2</td>
-            <td name="driver_name">John Sercu</td>
-            <td name="car_description">2018 Ferrari 488 Spider</td>
-            <td style='color:darkorange' name="top_speed"> 149.0</td>
-            <td style='font-size:smaller' name="speed_at_finish">139.0</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.4</td>
-            <td style='font-size:smaller' name="time_to_100">78.99</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">117.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-3">
-            <td name="heat">2</td>
-            <td name="run">3</td>
-            <td name="driver_name">Scott Sherwood</td>
-            <td name="car_description">2019 McLaren Senna</td>
-            <td style='color:darkorange' name="top_speed"> 131.95</td>
-            <td style='font-size:smaller' name="speed_at_finish">120.33</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">42.65</td>
-            <td style='font-size:smaller' name="time_to_100">71.09</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.8</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-4">
-            <td name="heat">2</td>
-            <td name="run">4</td>
-            <td name="driver_name">Tom Ellison</td>
-            <td name="car_description">2018 Porsche 911</td>
-            <td style='color:darkorange' name="top_speed"> 157.37</td>
-            <td style='font-size:smaller' name="speed_at_finish">144.02</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">37.44</td>
-            <td style='font-size:smaller' name="time_to_100">62.4</td>
-            <td style='font-size:smaller' name="time_to_150">93.6</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">98.2</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-5">
-            <td name="heat">2</td>
-            <td name="run">5</td>
-            <td name="driver_name">Ross Garber</td>
-            <td name="car_description">1967 Lamborghini Miura</td>
-            <td style='color:darkorange' name="top_speed"> 109.27</td>
-            <td style='font-size:smaller' name="speed_at_finish">100.0</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">54.36</td>
-            <td style='font-size:smaller' name="time_to_100">90.6</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-6">
-            <td name="heat">2</td>
-            <td name="run">6</td>
-            <td name="driver_name">Jereme Pohill</td>
-            <td name="car_description">2019 McLaren Senna</td>
-            <td style='color:darkorange' name="top_speed"> 184.72</td>
-            <td style='font-size:smaller' name="speed_at_finish">177.72</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">35.73</td>
-            <td style='font-size:smaller' name="time_to_100">59.55</td>
-            <td style='font-size:smaller' name="time_to_150">89.32</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-7">
-            <td name="heat">2</td>
-            <td name="run">7</td>
-            <td name="driver_name">McLaren Houston</td>
-            <td name="car_description">TBD</td>
-            <td style='color:darkorange' name="top_speed"> 103.2</td>
-            <td style='font-size:smaller' name="speed_at_finish">67.07</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">57.56</td>
-            <td style='font-size:smaller' name="time_to_100">95.93</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_2-8">
-            <td name="heat">2</td>
-            <td name="run">8</td>
-            <td name="driver_name">Sergio Pena</td>
-            <td name="car_description">2024 Aston Martin DBX707</td>
-            <td style='color:darkorange' name="top_speed"> 144.11</td>
-            <td style='font-size:smaller' name="speed_at_finish">122.01</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">41.26</td>
-            <td style='font-size:smaller' name="time_to_100">68.77</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.1</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-1">
-            <td name="heat">3</td>
-            <td name="run">1</td>
-            <td name="driver_name">Sergio Pena</td>
-            <td name="car_description">2024 Aston Martin DB12 Volante</td>
-            <td style='color:darkorange' name="top_speed"> 170.98</td>
-            <td style='font-size:smaller' name="speed_at_finish">120.32</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">38.71</td>
-            <td style='font-size:smaller' name="time_to_100">64.51</td>
-            <td style='font-size:smaller' name="time_to_150">96.77</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.3</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-2">
-            <td name="heat">3</td>
-            <td name="run">2</td>
-            <td name="driver_name">Scott Mosier</td>
-            <td name="car_description">2018 Porsche 911 GT3</td>
-            <td style='color:darkorange' name="top_speed"> 137.32</td>
-            <td style='font-size:smaller' name="speed_at_finish">123.37</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">49.72</td>
-            <td style='font-size:smaller' name="time_to_100">82.87</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">113.8</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-3">
-            <td name="heat">3</td>
-            <td name="run">3</td>
-            <td name="driver_name">Craig Mungary</td>
-            <td name="car_description">2017 Mclaren 570 S</td>
-            <td style='color:darkorange' name="top_speed"> 143.98</td>
-            <td style='font-size:smaller' name="speed_at_finish">67.77</td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">48.63</td>
-            <td style='font-size:smaller' name="time_to_100">81.05</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">116.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-4">
-            <td name="heat">3</td>
-            <td name="run">4</td>
-            <td name="driver_name">Blake McDonald</td>
-            <td name="car_description">2022 Mclaren 765 LT</td>
-            <td style='color:darkorange' name="top_speed"> 181.03</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.69</td>
-            <td style='font-size:smaller' name="time_to_100">61.15</td>
-            <td style='font-size:smaller' name="time_to_150">91.73</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-5">
-            <td name="heat">3</td>
-            <td name="run">5</td>
-            <td name="driver_name">Todd Campbell</td>
-            <td name="car_description">2022 Porsche 911 Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 220.37</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">30.87</td>
-            <td style='font-size:smaller' name="time_to_100">51.46</td>
-            <td style='font-size:smaller' name="time_to_150">77.19</td>
-            <td style='font-size:smaller' name="time_to_200">102.92</td>
-            <td style='font-size:smaller' name="time_to_top_speed">113.4</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-6">
-            <td name="heat">3</td>
-            <td name="run">6</td>
-            <td name="driver_name">Jeremy Hixson</td>
-            <td name="car_description">2023 BMW M3 Competition</td>
-            <td style='color:darkorange' name="top_speed"> 132.39</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.77</td>
-            <td style='font-size:smaller' name="time_to_100">79.61</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">105.4</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-7">
-            <td name="heat">3</td>
-            <td name="run">7</td>
-            <td name="driver_name">Dave Concannon</td>
-            <td name="car_description">2009 Porsche 911</td>
-            <td style='color:darkorange' name="top_speed"> 107.64</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">58.03</td>
-            <td style='font-size:smaller' name="time_to_100">96.71</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">104.1</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_3-8">
-            <td name="heat">3</td>
-            <td name="run">8</td>
-            <td name="driver_name">Steve Haywood</td>
-            <td name="car_description">2018 Porsche GT3</td>
-            <td style='color:darkorange' name="top_speed"> 188.79</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.84</td>
-            <td style='font-size:smaller' name="time_to_100">61.39</td>
-            <td style='font-size:smaller' name="time_to_150">92.09</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">115.9</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-1">
-            <td name="heat">4</td>
-            <td name="run">1</td>
-            <td name="driver_name">Dave Stone</td>
-            <td name="car_description">TBD-DaveStone-2</td>
-            <td style='color:darkorange' name="top_speed"> 192.35</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">35.56</td>
-            <td style='font-size:smaller' name="time_to_100">59.27</td>
-            <td style='font-size:smaller' name="time_to_150">88.9</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">114.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-2">
-            <td name="heat">4</td>
-            <td name="run">2</td>
-            <td name="driver_name">Kevin LaChapelle</td>
-            <td name="car_description">2020 Audi R8</td>
-            <td style='color:darkorange' name="top_speed"> 194.67</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">28.82</td>
-            <td style='font-size:smaller' name="time_to_100">48.03</td>
-            <td style='font-size:smaller' name="time_to_150">72.05</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.5</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-3">
-            <td name="heat">4</td>
-            <td name="run">3</td>
-            <td name="driver_name">John Frey</td>
-            <td name="car_description">1992 Porsche 911 Singer Turbo</td>
-            <td style='color:darkorange' name="top_speed"> 209.88</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">26.7</td>
-            <td style='font-size:smaller' name="time_to_100">44.5</td>
-            <td style='font-size:smaller' name="time_to_150">66.75</td>
-            <td style='font-size:smaller' name="time_to_200">89.0</td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.4</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-4">
-            <td name="heat">4</td>
-            <td name="run">4</td>
-            <td name="driver_name">Anders Hainer</td>
-            <td name="car_description">2023 McLaren Artura</td>
-            <td style='color:darkorange' name="top_speed"> 180.94</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.38</td>
-            <td style='font-size:smaller' name="time_to_100">60.63</td>
-            <td style='font-size:smaller' name="time_to_150">90.94</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">109.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-5">
-            <td name="heat">4</td>
-            <td name="run">5</td>
-            <td name="driver_name">Gabriel Vega</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 132.27</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.27</td>
-            <td style='font-size:smaller' name="time_to_100">78.78</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">104.2</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-6">
-            <td name="heat">4</td>
-            <td name="run">6</td>
-            <td name="driver_name">Karl Brauer</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 163.43</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">39.94</td>
-            <td style='font-size:smaller' name="time_to_100">66.57</td>
-            <td style='font-size:smaller' name="time_to_150">99.86</td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">108.8</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-7">
-            <td name="heat">4</td>
-            <td name="run">7</td>
-            <td name="driver_name">Seyth Miersma</td>
-            <td name="car_description">McLaren 750S</td>
-            <td style='color:darkorange' name="top_speed"> 103.63</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">62.59</td>
-            <td style='font-size:smaller' name="time_to_100">104.31</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">108.1</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_4-8">
-            <td name="heat">4</td>
-            <td name="run">8</td>
-            <td name="driver_name">Rick Nelson</td>
-            <td name="car_description">2018 Ferrari 488 Spider</td>
-            <td style='color:darkorange' name="top_speed"> 149.0</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.4</td>
-            <td style='font-size:smaller' name="time_to_100">78.99</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">117.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_5-1">
-            <td name="heat">5</td>
-            <td name="run">1</td>
-            <td name="driver_name">John Sercu</td>
-            <td name="car_description">2018 Ferrari 488 Spider</td>
-            <td style='color:darkorange' name="top_speed"> 149.0</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.4</td>
-            <td style='font-size:smaller' name="time_to_100">78.99</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">117.7</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_5-2">
-            <td name="heat">5</td>
-            <td name="run">2</td>
-            <td name="driver_name">Scott Sherwood</td>
-            <td name="car_description">2019 McLaren Senna</td>
-            <td style='color:darkorange' name="top_speed"> 131.95</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">42.65</td>
-            <td style='font-size:smaller' name="time_to_100">71.09</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.8</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_5-3">
-            <td name="heat">5</td>
-            <td name="run">3</td>
-            <td name="driver_name">McLaren Houston</td>
-            <td name="car_description">TBD</td>
-            <td style='color:darkorange' name="top_speed"> 103.2</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">57.56</td>
-            <td style='font-size:smaller' name="time_to_100">95.93</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
-        </tr>
-        
-        
-        
-        <tr name="schedule_row" id="schedule_row_5-4">
-            <td name="heat">5</td>
-            <td name="run">4</td>
-            <td name="driver_name">Brad Green</td>
-            <td name="car_description">2014 Porsche 911 Turbo</td>
-            <td style='color:darkorange' name="top_speed"> 119.71</td>
-            <td style='font-size:smaller' name="speed_at_finish"></td>
-            <td></td>
-            <td style='font-size:smaller' name="time_to_60">56.84</td>
-            <td style='font-size:smaller' name="time_to_100">94.73</td>
-            <td style='font-size:smaller' name="time_to_150"></td>
-            <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">113.4</td>
-        </tr>
-        
-        
-        
         <tr name="schedule_row" id="schedule_row_5-5">
             <td name="heat">5</td>
             <td name="run">5</td>
             <td name="driver_name">Harrison Garber</td>
             <td name="car_description">2006 Ford GT</td>
-            <td style='color:darkorange' name="top_speed"> 152.13</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.4</td>
-            <td style='font-size:smaller' name="time_to_100">60.67</td>
-            <td style='font-size:smaller' name="time_to_150">91.01</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">92.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -797,14 +853,14 @@
             <td name="run">6</td>
             <td name="driver_name">John Crowley</td>
             <td name="car_description">2016 McLaren 675LT</td>
-            <td style='color:darkorange' name="top_speed"> 127.83</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.88</td>
-            <td style='font-size:smaller' name="time_to_100">79.79</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">102.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -814,14 +870,14 @@
             <td name="run">7</td>
             <td name="driver_name">Matthew O&#39;Brien</td>
             <td name="car_description">2022 McLaren 765LT Spider</td>
-            <td style='color:darkorange' name="top_speed"> 203.37</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">30.24</td>
-            <td style='font-size:smaller' name="time_to_100">50.4</td>
-            <td style='font-size:smaller' name="time_to_150">75.6</td>
-            <td style='font-size:smaller' name="time_to_200">100.8</td>
-            <td style='font-size:smaller' name="time_to_top_speed">102.5</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -831,14 +887,14 @@
             <td name="run">8</td>
             <td name="driver_name">Robert Schmidt</td>
             <td name="car_description">2021 Porsche 911 Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 133.6</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">40.78</td>
-            <td style='font-size:smaller' name="time_to_100">67.96</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">90.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -998,19 +1054,21 @@
         
         
         
+        
+        
         <tr name="schedule_row" id="schedule_row_6-1">
             <td name="heat">6</td>
             <td name="run">1</td>
             <td name="driver_name">Scott Mosier</td>
             <td name="car_description">2018 Porsche 911 GT3</td>
-            <td style='color:darkorange' name="top_speed"> 137.32</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">49.72</td>
-            <td style='font-size:smaller' name="time_to_100">82.87</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">113.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1020,14 +1078,14 @@
             <td name="run">2</td>
             <td name="driver_name">Robert Schmidt</td>
             <td name="car_description">2021 Porsche 911 Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 133.6</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">40.78</td>
-            <td style='font-size:smaller' name="time_to_100">67.96</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">90.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1037,14 +1095,14 @@
             <td name="run">3</td>
             <td name="driver_name">Nick Thomson</td>
             <td name="car_description">2024 Porsche Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 166.13</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">32.72</td>
-            <td style='font-size:smaller' name="time_to_100">54.53</td>
-            <td style='font-size:smaller' name="time_to_150">81.8</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">90.6</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1054,14 +1112,14 @@
             <td name="run">4</td>
             <td name="driver_name">Ron Martinez</td>
             <td name="car_description">2019 Porsche Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 151.99</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">40.66</td>
-            <td style='font-size:smaller' name="time_to_100">67.77</td>
-            <td style='font-size:smaller' name="time_to_150">101.65</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">103.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1071,14 +1129,14 @@
             <td name="run">5</td>
             <td name="driver_name">Zach Griffin</td>
             <td name="car_description">TBD-ZachGriffin</td>
-            <td style='color:darkorange' name="top_speed"> 110.7</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">53.01</td>
-            <td style='font-size:smaller' name="time_to_100">88.35</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1088,14 +1146,14 @@
             <td name="run">6</td>
             <td name="driver_name">Lance Funk</td>
             <td name="car_description">2024 Corvette Z06</td>
-            <td style='color:darkorange' name="top_speed"> 200.36</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">28.24</td>
-            <td style='font-size:smaller' name="time_to_100">47.07</td>
-            <td style='font-size:smaller' name="time_to_150">70.6</td>
-            <td style='font-size:smaller' name="time_to_200">94.13</td>
-            <td style='font-size:smaller' name="time_to_top_speed">94.3</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1105,14 +1163,14 @@
             <td name="run">7</td>
             <td name="driver_name">Mark Andrews</td>
             <td name="car_description">2024 McLaren 750S </td>
-            <td style='color:darkorange' name="top_speed"> 139.07</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">45.21</td>
-            <td style='font-size:smaller' name="time_to_100">75.36</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">104.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1122,14 +1180,14 @@
             <td name="run">8</td>
             <td name="driver_name">Chase Montague</td>
             <td name="car_description">2019 Porsche 911 GT3</td>
-            <td style='color:darkorange' name="top_speed"> 114.51</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">60.41</td>
-            <td style='font-size:smaller' name="time_to_100">100.69</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">115.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1139,14 +1197,14 @@
             <td name="run">1</td>
             <td name="driver_name">Dave Stone</td>
             <td name="car_description">TBD-DaveStone-3</td>
-            <td style='color:darkorange' name="top_speed"> 133.71</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">53.13</td>
-            <td style='font-size:smaller' name="time_to_100">88.55</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">118.4</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1156,14 +1214,14 @@
             <td name="run">2</td>
             <td name="driver_name">Julie Hainer</td>
             <td name="car_description">2023 McLaren Artura</td>
-            <td style='color:darkorange' name="top_speed"> 180.94</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.38</td>
-            <td style='font-size:smaller' name="time_to_100">60.63</td>
-            <td style='font-size:smaller' name="time_to_150">90.94</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">109.7</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1173,14 +1231,14 @@
             <td name="run">3</td>
             <td name="driver_name">Kevin Longe</td>
             <td name="car_description">2022 Porsche 911 Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 184.33</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">36.39</td>
-            <td style='font-size:smaller' name="time_to_100">60.65</td>
-            <td style='font-size:smaller' name="time_to_150">90.98</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">111.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1190,14 +1248,14 @@
             <td name="run">4</td>
             <td name="driver_name">Gary Young</td>
             <td name="car_description">2022 Porsche Turbo S Cabriolet 911</td>
-            <td style='color:darkorange' name="top_speed"> 109.03</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">64.55</td>
-            <td style='font-size:smaller' name="time_to_100">107.58</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">117.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1207,14 +1265,14 @@
             <td name="run">5</td>
             <td name="driver_name">Paul Reep</td>
             <td name="car_description">2023 Volvo V90</td>
-            <td style='color:darkorange' name="top_speed"> 110.07</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">55.66</td>
-            <td style='font-size:smaller' name="time_to_100">92.76</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">102.1</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1224,14 +1282,14 @@
             <td name="run">6</td>
             <td name="driver_name">Bruce Morse</td>
             <td name="car_description">2024 Porsche 911 Turbo S Cabriolet</td>
-            <td style='color:darkorange' name="top_speed"> 151.58</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.38</td>
-            <td style='font-size:smaller' name="time_to_100">78.97</td>
-            <td style='font-size:smaller' name="time_to_150">118.45</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">119.7</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1241,14 +1299,14 @@
             <td name="run">7</td>
             <td name="driver_name">Morgan Briggs</td>
             <td name="car_description">TBD-MorganBriggs</td>
-            <td style='color:darkorange' name="top_speed"> 100.33</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">55.8</td>
-            <td style='font-size:smaller' name="time_to_100">92.99</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1258,14 +1316,14 @@
             <td name="run">8</td>
             <td name="driver_name">Lori Fae Jensen</td>
             <td name="car_description">2022 Bentley Continental GT Speed</td>
-            <td style='color:darkorange' name="top_speed"> 192.0</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">34.59</td>
-            <td style='font-size:smaller' name="time_to_100">57.66</td>
-            <td style='font-size:smaller' name="time_to_150">86.48</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.7</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1275,14 +1333,14 @@
             <td name="run">1</td>
             <td name="driver_name">McLaren Houston</td>
             <td name="car_description">TBD</td>
-            <td style='color:darkorange' name="top_speed"> 103.2</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">57.56</td>
-            <td style='font-size:smaller' name="time_to_100">95.93</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1292,14 +1350,14 @@
             <td name="run">2</td>
             <td name="driver_name">John Crowley</td>
             <td name="car_description">2016 McLaren 675LT</td>
-            <td style='color:darkorange' name="top_speed"> 127.83</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">47.88</td>
-            <td style='font-size:smaller' name="time_to_100">79.79</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">102.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1309,14 +1367,14 @@
             <td name="run">3</td>
             <td name="driver_name">Matthew O&#39;Brien</td>
             <td name="car_description">2020 Ferrari 488 Pista</td>
-            <td style='color:darkorange' name="top_speed"> 160.39</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">34.34</td>
-            <td style='font-size:smaller' name="time_to_100">57.24</td>
-            <td style='font-size:smaller' name="time_to_150">85.86</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">91.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1325,15 +1383,15 @@
             <td name="heat">8</td>
             <td name="run">4</td>
             <td name="driver_name">Rick Nemeroff</td>
-            <td name="car_description">1990 Porsche 911 C4 </td>
-            <td style='color:darkorange' name="top_speed"> 160.71</td>
+            <td name="car_description">1990 Porsche 911 C4 </td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">41.03</td>
-            <td style='font-size:smaller' name="time_to_100">68.38</td>
-            <td style='font-size:smaller' name="time_to_150">102.58</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">109.9</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1343,14 +1401,14 @@
             <td name="run">5</td>
             <td name="driver_name">James Cruickshank</td>
             <td name="car_description">2011 Mercedes-Benz CL65 AMG</td>
-            <td style='color:darkorange' name="top_speed"> 164.13</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">37.36</td>
-            <td style='font-size:smaller' name="time_to_100">62.27</td>
-            <td style='font-size:smaller' name="time_to_150">93.4</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">102.2</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1360,14 +1418,14 @@
             <td name="run">6</td>
             <td name="driver_name">Melissa Rivelo</td>
             <td name="car_description">2024 Porsche Carrera 4 GTS</td>
-            <td style='color:darkorange' name="top_speed"> 156.58</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">41.12</td>
-            <td style='font-size:smaller' name="time_to_100">68.53</td>
-            <td style='font-size:smaller' name="time_to_150">102.79</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">107.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1377,14 +1435,14 @@
             <td name="run">7</td>
             <td name="driver_name">James Will</td>
             <td name="car_description">2023 Porsche 911 Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 211.18</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">27.64</td>
-            <td style='font-size:smaller' name="time_to_100">46.07</td>
-            <td style='font-size:smaller' name="time_to_150">69.11</td>
-            <td style='font-size:smaller' name="time_to_200">92.15</td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.3</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
+            <td style='font-size:smaller' name="time_to_200"></td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1394,14 +1452,14 @@
             <td name="run">8</td>
             <td name="driver_name">Andrew Davidson</td>
             <td name="car_description">2021 F8 Ferrari</td>
-            <td style='color:darkorange' name="top_speed"> 126.15</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">43.66</td>
-            <td style='font-size:smaller' name="time_to_100">72.77</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">91.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1411,14 +1469,14 @@
             <td name="run">1</td>
             <td name="driver_name">Nick Thomson</td>
             <td name="car_description">2024 Porsche Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 166.13</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">32.72</td>
-            <td style='font-size:smaller' name="time_to_100">54.53</td>
-            <td style='font-size:smaller' name="time_to_150">81.8</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">90.6</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1428,14 +1486,14 @@
             <td name="run">2</td>
             <td name="driver_name">Ron Martinez</td>
             <td name="car_description">2019 Porsche Turbo S</td>
-            <td style='color:darkorange' name="top_speed"> 151.99</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">40.66</td>
-            <td style='font-size:smaller' name="time_to_100">67.77</td>
-            <td style='font-size:smaller' name="time_to_150">101.65</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">103.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1445,14 +1503,14 @@
             <td name="run">3</td>
             <td name="driver_name">Zach Griffin</td>
             <td name="car_description">TBD-ZachGriffin</td>
-            <td style='color:darkorange' name="top_speed"> 110.7</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">53.01</td>
-            <td style='font-size:smaller' name="time_to_100">88.35</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1462,14 +1520,14 @@
             <td name="run">4</td>
             <td name="driver_name">Lance Funk</td>
             <td name="car_description">2016 Hennessy Corvette Z06</td>
-            <td style='color:darkorange' name="top_speed"> 171.01</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">34.14</td>
-            <td style='font-size:smaller' name="time_to_100">56.9</td>
-            <td style='font-size:smaller' name="time_to_150">85.35</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">97.3</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1479,14 +1537,14 @@
             <td name="run">5</td>
             <td name="driver_name">Rick Roberts</td>
             <td name="car_description">2022 McLaren 765 LT Spider</td>
-            <td style='color:darkorange' name="top_speed"> 160.87</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">34.87</td>
-            <td style='font-size:smaller' name="time_to_100">58.12</td>
-            <td style='font-size:smaller' name="time_to_150">87.18</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.5</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1496,14 +1554,14 @@
             <td name="run">6</td>
             <td name="driver_name">Jeremy Thompson</td>
             <td name="car_description">2022 Lamborghini Aventador</td>
-            <td style='color:darkorange' name="top_speed"> 146.67</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">45.33</td>
-            <td style='font-size:smaller' name="time_to_100">75.55</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">110.8</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1513,14 +1571,14 @@
             <td name="run">7</td>
             <td name="driver_name">Mike Guyette</td>
             <td name="car_description">TBD</td>
-            <td style='color:darkorange' name="top_speed"> 103.2</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">57.56</td>
-            <td style='font-size:smaller' name="time_to_100">95.93</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
             <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">99.0</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
@@ -1530,14 +1588,14 @@
             <td name="run">8</td>
             <td name="driver_name">SVTdF</td>
             <td name="car_description">Mutt Cutts</td>
-            <td style='color:darkorange' name="top_speed"> 195.71</td>
+            <td style='color:darkorange' name="top_speed"></td>
             <td style='font-size:smaller' name="speed_at_finish"></td>
             <td></td>
-            <td style='font-size:smaller' name="time_to_60">28.54</td>
-            <td style='font-size:smaller' name="time_to_100">47.57</td>
-            <td style='font-size:smaller' name="time_to_150">71.36</td>
+            <td style='font-size:smaller' name="time_to_60"></td>
+            <td style='font-size:smaller' name="time_to_100"></td>
+            <td style='font-size:smaller' name="time_to_150"></td>
             <td style='font-size:smaller' name="time_to_200"></td>
-            <td style='font-size:smaller' name="time_to_top_speed">93.1</td>
+            <td style='font-size:smaller' name="time_to_top_speed"></td>
         </tr>
         
         
