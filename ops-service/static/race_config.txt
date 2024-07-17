@@ -1,4 +1,4 @@
-config_version=1003
+config_version=1001
 bamf_speed=0.00
 finishLine_left_lat=43.78892
 finishLine_left_lng=-114.48283

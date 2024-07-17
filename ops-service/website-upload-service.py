@@ -4,7 +4,7 @@ import paramiko
 import sys
 #from time import ctime
 
-identity_file_path = "C:\\users\smosier\\downloads\\svtdf_results_id_ed25519"
+identity_file_path = "C:\\repos\\identity\\svtdf_results_id_ed25519"
 local_path_to_results = "C:\\repos\\st_pitweb\\ops-service\\results\\results.html"
 remote_path_to_results = "./files/results.html"
 polling_interval_in_sec = 3
