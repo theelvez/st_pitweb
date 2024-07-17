@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVTdF Schedule View</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: medium;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 1px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 85vh
+        }
+        .right {
+            overflow-x: visible;
+            overflow-y: scroll;
+            height: 85vh
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+        function GetURLParameter(sParam) {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++) 
+            {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam) 
+                {
+                    return sParameterName[1];
+                }
+            }
+        }
+        function logTableError(which, message) {
+            document.getElementById(which).innerText += message 
+            document.getElementById(which).innerHTML += "<br>"
+        }
+        function getClassForRunCount(runCount) {
+            const maxRunCount = 8;
+            if (runCount > maxRunCount) {
+                return "too-many-runs";
+            } else if (runCount < maxRunCount) {
+                return "run-count-low";
+            }
+            return "run-count-ok";
+        }
+
+        function clearHeat(heat_number) {
+            if (window.confirm("Delete all runs in heat " + heat_number + "?")) {
+                postAndReload("clear_heat", "" + heat_number)
+            }
+        }
+
+        function saveResultsToFile(filename) {
+            postOnly("save_results", filename)
+        }
+
+        function runValidationChecks() {
+
+            //var targetContainer = document.getElementById("target_div");
+            var eventSource = new EventSource("/stream")
+            eventSource.onmessage = function(e) {
+                //targetContainer.innerHTML = e.data;
+                location.reload(true);
+            };
+            
+            nxt = GetURLParameter("next_id")
+            if (nxt != undefined)
+            {
+                document.getElementById("next_upload_device_id").innerText = nxt
+            }
+
+            const rows = document.getElementsByName('schedule_row');
+
+            //
+            // Count runs in each heat
+            //
+            var heat_run_count = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const heat = parseInt(rows[i].children.namedItem('heat').innerText);
+                if (!heat_run_count.has(heat)) {
+                    heat_run_count.set(heat, 0);
+                }
+                var cur_count = heat_run_count.get(heat);
+                heat_run_count.set(heat, cur_count + 1);
+            }
+
+            //
+            // Check that the same driver isn't listed more than once in a given heat
+            //
+            // map(heat -> map(driver_id -> array(rows)))
+            var heat_map = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const driver_id = rows[i].children.namedItem('driver_id').innerText;
+                const heat = rows[i].children.namedItem('heat').innerText;
+                if (heat_map.get(heat) === undefined) {
+                    heat_map.set(heat, new Map());
+                }
+                var curr = heat_map.get(heat).get(driver_id);
+                if (curr === undefined) {
+                    heat_map.get(heat).set(driver_id, [i]);
+                } else {
+                    curr.push(i);
+                    heat_map.get(heat).set(driver_id, curr);
+                }
+            }
+            //console.log(heat_map);
+            heat_map.forEach((driver_map, h_key, h_map) => {
+                driver_map.forEach((row_list, d_key, d_map) => {
+                    const heat = h_key;
+                    const driver_id = d_key;
+                    if (row_list.length > 1) {
+                        var dn = rows[row_list[0]].children.namedItem('driver_name')
+                        logTableError("schedule_errors", "ERROR_1: driver_id #" + driver_id + ' named "'+ dn.innerText + '" has multiple runs ('
+                         + row_list.length + ") in heat #" + heat)
+                        for (const row of row_list) {
+                            rows[row].children.namedItem('heat').classList.add('error_cell')
+                            rows[row].children.namedItem('driver_name').classList.add('error_cell')
+                        }
+                    }
+                })
+            });
+
+            //
+            // Check that the same car isn't listed more than once in a given heat
+            //
+            // map(heat -> map(car_id -> array(rows)))
+            var car_heat_map = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const car_id = rows[i].children.namedItem('car_id').innerText;
+                const heat = rows[i].children.namedItem('heat').innerText;
+                if (car_heat_map.get(heat) === undefined) {
+                    car_heat_map.set(heat, new Map());
+                }
+                var curr = car_heat_map.get(heat).get(car_id);
+                if (curr === undefined) {
+                    car_heat_map.get(heat).set(car_id, [i]);
+                } else {
+                    curr.push(i);
+                    car_heat_map.get(heat).set(car_id, curr);
+                }
+            }
+            //console.log(car_heat_map);
+            car_heat_map.forEach((car_map, h_key, h_map) => {
+                car_map.forEach((row_list, d_key, d_map) => {
+                    const heat = h_key;
+                    const car_id = d_key;
+                    if (row_list.length > 1) {
+                        var dn = rows[row_list[0]].children.namedItem('car_description')
+                        logTableError("schedule_errors", "ERROR_2: car_id #" + car_id + ' named "'+ dn.innerText + '" has multiple runs ('
+                         + row_list.length + ") in heat #" + heat)
+                        for (const row of row_list) {
+                            rows[row].children.namedItem('heat').classList.add('error_cell')
+                            rows[row].children.namedItem('car_id').classList.add('error_cell')
+                        }
+                    }
+                })
+            });
+
+            //
+            // Highlight cars with "TBD" or "TBC" or "UNKNOWN" in their description
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const car_description = rows[i].children.namedItem('car_description')
+                const cd = car_description.innerText.toLowerCase();
+                if (cd.includes("tbd") || cd.includes("tbc") || cd.includes("unknown")) {
+                    car_description.classList.add('error_cell')
+                    const heat = rows[i].children.namedItem('heat').innerText;
+                    const run = rows[i].children.namedItem('run').innerText;
+                    logTableError("schedule_errors", "Heat " + heat + ", run " + run + " has a TBD/TBC/UNKNOWN car description")
+                }
+            }
+
+            //
+            // highlight device_id == 0
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const device_id = rows[i].children.namedItem('device_id');
+                if (device_id.innerText == "0") {
+                    device_id.classList.add('error_cell');
+                }
+            }
+
+            //
+            // Insert space between heats
+            //
+            const header = document.getElementById('schedule_view_header');
+            var curHeat = 1;
+            {
+                var newRow = document.createElement("tr");
+                var runCount = heat_run_count.get(1);
+                newRow.innerHTML = "<td colspan=11>Heat 1 <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearHeat(1)'>Clear Heat</button></td>";
+                newRow.style.backgroundColor = "#000022"
+                header.before(newRow);
+            }
+            for (let i = 0; i < rows.length; i++) {
+                if (i == rows.length) {
+                    continue;
+                }
+                if (rows[i+1] === undefined) {
+                    continue;
+                }
+                const nextHeatElement = rows[i+1].children.namedItem('heat');
+                if (nextHeatElement === undefined) {
+                    continue;
+                }
+                const nextHeat = parseInt(nextHeatElement.innerText);
+                if (curHeat != nextHeat) {
+                    var newRow = document.createElement("tr");
+                    var runCount = heat_run_count.get(parseInt(nextHeat));
+                    newRow.innerHTML = "<td colspan=11>Heat " + nextHeat + " <span class='" + getClassForRunCount(runCount) + "'>(" + runCount + " runs)</span><button class='button' type='button' onclick='clearHeat(" + nextHeat + ")'>Clear Heat</button></td>";
+                    newRow.style.backgroundColor = "#000022"
+                    rows[i].after(newRow);
+                    var newHeader = document.createElement("tr");
+                    newHeader.innerHTML = header.innerHTML;
+                    newHeader.classList.add("column_name");
+                    newRow.after(newHeader);
+
+                    curHeat = nextHeat;
+                }
+            }
+        }
+        function postOnly(path, body) {
+            fetch(window.location.origin + "/" + path, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+            });
+        }
+        function postAndReload(path, body) {
+            fetch(window.location.origin + "/" + path, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+                //logMessage("POST response: '" + json + "'");
+                location.reload(true);
+            });
+        }
+        function parse_heat_run_string(heat_run_string) {
+            var values = heat_run_string.replaceAll(',','-').replaceAll(' ','-').split("-")
+            console.log(values)
+            if (values.length != 2) {
+                return undefined;
+            }
+            if (isNaN(parseInt(values[0])) ||
+                isNaN(parseInt(values[1]))) {
+                return undefined;
+            }
+
+            return values;
+        }
+        function moveRun(result_id,from_heat,from_run) {
+            //window.alert("moveRun(" + result_id + "," + from_heat + "," + from_run + ")")
+            var to_string = document.getElementById("move_to_input_" + from_heat + "-" + from_run).value
+            var values = parse_heat_run_string(to_string);
+            if (values === undefined) {
+                window.alert("Error: '" + to_string + "' isn't a valid format for heat and run.  Please use the 'heat-run' format")
+                return;
+            }
+            var to_heat = values[0];
+            var to_run = values[1];
+
+            postAndReload("move_run_from_to", "" + result_id + "," + to_heat + "," + to_run)
+        }
+        function removeRun(result_id) {
+            postAndReload("move_run_from_to", "" + result_id + ",0,0");
+        }
+        function emptyRunTable() {
+            if (window.confirm("THIS WILL DELETE ALL ROWS IN THE RUN TABLE!")) {
+                postAndReload("empty_run_table", "");
+            }
+        }
+        function autoScheduleRemaining() {
+            postAndReload("populate_run_table", "");
+        }
+        function assignDevices() {
+            postAndReload("assign_devices_to_runs", "");
+        }
+        function applyUploadToRunId(upload_id, result_id_input) {
+            result_id = document.getElementById(result_id_input).value;
+            postAndReload("apply_upload_to_run",
+                "" +
+                upload_id + "," + 
+                result_id 
+            );
+        }
+        function addRun(result_id, driver_id, car_select_name, heat_run_input) {
+            car_id_device_id = document.getElementById(car_select_name).value.split(',');
+            car_id = car_id_device_id[0];
+            device_id = car_id_device_id[1];
+            heat_run_string = document.getElementById(heat_run_input).value;
+            var heat_run = parse_heat_run_string(heat_run_string);
+            if (heat_run === undefined) {
+                window.alert("Error: '" + heat_run_string + "' isn't a valid format for heat and run.  Please use the 'heat-run' format");
+                return;
+            }
+            var to_heat = heat_run[0];
+            var to_run = heat_run[1];
+            //window.alert("addRun: result_id=", + result_id + ", driver_id=" + driver_id + ", car_id=" + car_id + ", device_id=" + device_id + ", heat=" + to_heat + ", run=" + to_run);
+
+            var gps_speed_timestamp = "--";
+            var gps_top_speed = 0.0;
+            var laser_speed_timestamp = "--";
+            var laser_top_speed = 0.0;
+            var top_speed = 0.0;
+            var datafile_path = "--";
+            var upload_id = -1;
+
+            //var result_id = 999;
+
+            postAndReload("add_run_table_record",
+                "" +
+                result_id + "," +
+                to_heat + "," +
+                to_run + "," +
+                driver_id + "," +
+                car_id + "," +
+                device_id + "," +
+           //     gps_speed_timestamp + "," +
+           //     gps_top_speed + "," +
+           //     laser_speed_timestamp + "," +
+                laser_top_speed + "," +
+                top_speed + "," +
+                upload_id);
+        }
+        function testUploadResult() {
+            var next_id_element = document.getElementById("next_upload_device_id")
+            const next_id = parseInt(next_id_element.innerText)
+            next_id_element.innerText = next_id + 1
+
+            postAndReloadWithIncrement("upload_test_log", "" + next_id)            
+        }
+        function postAndReloadWithIncrement(path, body) {
+            url = window.location.origin + "/" + path
+            fetch(url, {
+                method: "POST",
+                body: "" + body,
+                headers: { "Content-type": "text/plain" }
+            })
+            .then((response) => response.json())
+            .then((json) => {
+                parts = window.location.href.split('?')
+                newHref = parts[0] + "?next_id=" + (document.getElementById("next_upload_device_id").innerText)
+                location.replace(newHref);
+            });
+        }
+
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+    <!--<link rel="icon" type="image/png" href="/logo.png" />-->
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/raw-tables">Raw Tables View</a></li>
+        <li><a href="/schedule">Schedule View</a></li>
+        <li><a href="/results-simple">Results Simple View</a></li>
+        <li><a href="/speed-trap-view">Speed Trap View</a></li>
+    </ul>
+    <h1>SVTdF Schedule View</h1>
+<!-------------------------------------------------------->
+<!--<div id="target_div"></div>-->
+<div class="SxS">
+<div class="column left">
+    <button class="button" type="button" onclick="emptyRunTable()">Delete Schedule</button>
+    <button class="button" type="button" onclick="autoScheduleRemaining()">Auto-Schedule Remaining Runs</button>
+    <button class="button" type="button" onclick="assignDevices()">Assign Devices To Runs</button>
+    <table id="schedule_view" style="font-family:monospace">
+        <tr id="schedule_view_header" class="column_name">
+            <!--schedule-->
+            <td>heat</td>
+            <td>run</td>
+            <!--driver-->
+            <td>driver_name</td>
+            <td>drv_id</td>
+            <!--result-->
+            <td>res_id</td>
+            <!--device-->
+            <td>dev_id</td>
+            <!--<td>device_in_car</td>-->
+            <!--car-->
+            <td>car_id</td>
+            <td>car_description</td>
+            <!--result-->
+            <td>top_speed</td>
+            <!-- schedule -->
+            <td>move to</td>
+            <td>remove</td>
+        </tr>
+    {% for item in schedule %}
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="driver_id">{{ item.driver_id }}</td>
+            <td name="result_id">{{ item.result_id }}</td>
+            <td name="device_id">{{ item.device_id }}</td>
+            <!--<td name="device_in_car">{{ item.device_in_car }}</td>-->
+            <td name="car_id">{{ item.car_id }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td name="top_speed">{{ item.top_speed }}</td>
+            <td><input class="text-input" type="text" id="move_to_input_{{item.heat}}-{{item.run}}" size="5"><button class="button" type="button" onclick="moveRun({{item.result_id}},{{item.heat}},{{item.run}})">Move</button></td>
+            <td><button class="button" type="button" onclick="removeRun({{item.result_id}})">Remove</button></td>
+        </tr>
+    {% endfor %}
+    </table>
+    <div id="schedule_errors" style="font-family:monospace"></div>
+</div>
+<div class="column right">
+    <div>
+        next upload device id: <span id="next_upload_device_id">0</span>
+        <button class="button" type="button" onclick="testUploadResult()">Upload</button><BR>
+    </div>
+    <h3 class="table_title">Unscheduled Drivers</h3>
+    <table>
+        <table style="font-family:monospace">
+            <tr class="column_name">
+                <td>drv_id</td>
+                <td>driver_name</td>
+                <td>paid</td>
+                <td>scheduled</td>
+                <td>car</td>
+                <td>add to</td>
+            </tr>
+        {% for entry in unscheduled_drivers %}
+            <tr>
+                <td>{{entry.driver_id}}</td>
+                <td>{{entry.driver_name}}</td>
+                <td>{{entry.paid_run_count}}</td>
+                <td>{{entry.scheduled_run_count}}</td>
+                <td>
+                    <select id="car_select_driver_id_{{entry.driver_id}}">
+                        {% for car in cars %}
+                        <option {% if entry.default_car_id == car.car_id %} selected="selected" {% endif %} value="{{car.car_id}},{{car.device_in_car}}">({{car.car_id}}) {{car.car_description}}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td><input class="text-input" type="text" id="add_to_input_{{entry.driver_id}}" size="5">
+                    <button class="button" type="button" onclick="addRun({{next_result_id}},{{entry.driver_id}},'car_select_driver_id_{{entry.driver_id}}','add_to_input_{{entry.driver_id}}')">Add Run</button></td>
+            </tr>
+        {% endfor %}    
+    </table>
+    <h3 class="table_title">Unmatched Uploads</h3>
+    <table>
+        <table style="font-family:monospace">
+            <tr class="column_name">
+                <td>upload_id</td>
+                <td>timestamp</td>
+                <td>dev_id</td>
+                <td>top_speed</td>
+                <td>apply_to_res_id</td>
+            </tr>
+        {% for entry in unmatched_uploads %}
+            <tr>
+                <td>{{entry.upload_id}}</td>
+                <td>{{entry.upload_timestamp}}</td>
+                <td>{{entry.device_id}}</td>
+                <td>{{entry.gps_top_speed}}</td>
+                <td><input class="text-input" type="text" id="apply_upload_to_input_{{entry.upload_id}}" size="5">
+                    <button class="button" type="button" onclick="applyUploadToRunId({{entry.upload_id}},'apply_upload_to_input_{{entry.upload_id}}')">Apply</button></td>
+            </tr>
+        {% endfor %}    
+    </table>
+</div>
+</div>
+</body>
+</html>

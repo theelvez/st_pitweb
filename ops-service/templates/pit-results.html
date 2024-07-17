@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Race Results</title>
+    <link rel="stylesheet" href="/static/semantic.min.css">
+    <style>
+    body {
+        padding:50px;
+    }
+    
+    a {
+        color: white;
+    }
+    
+    p, li  {
+        
+        font-size:14pt;
+        line-height: 22pt;
+    }
+    
+    .column { 
+        
+        font-size:14pt; 
+    
+    }
+    
+    
+    
+    
+    </style>
+
+    <script src="/static/jquery-3.6.0.min.js"></script>
+    <script src="/static/semantic.min.js"></script>
+    <script>
+    
+    const duration = 10000; // static view duration
+    const scrollDelay = 30; // delay for the scrolling; lower values are smoother
+    var scrollInterval;
+    
+    function scrollToBottom() {
+        var currentPosition = window.pageYOffset;
+        var targetPosition = document.documentElement.scrollHeight - window.innerHeight;
+        var scrollStep = 1;
+    
+        scrollInterval = setInterval(function() {
+            if (currentPosition < targetPosition) {
+                currentPosition += scrollStep;
+                window.scrollTo(0, currentPosition);
+            } else {
+                clearInterval(scrollInterval);
+                
+                timeoutId = setTimeout(function() {
+                        location.href="/pit-results"; // RELOAD AFTER WE SHOW EACH SCREEN ONCE TO GET NEW AI
+                    }, duration);
+            }
+        }, scrollDelay);
+    }
+    
+    function stopScrolling() {
+        clearInterval(scrollInterval);
+        clearTimeout(timeoutId);
+        setTimeout(function() {
+            location.href = "/pit-results";
+        }, 120000); // If someone stops scrolling force a reload after two minutes just in case
+    }
+       
+    function repeatFunction(i, duration) {
+        
+        var options = ['top_speed', 'name', 'run_number', 'sponsors', 'sponsors'];
+        var randomOption = options[Math.floor(Math.random() * options.length)];  
+        timeoutId = setTimeout(function() {
+            $('.menu .item').tab('activate tab', 'tab-summary');
+            $('.menu .item').tab('change tab', 'tab-summary');
+            timeoutId = setTimeout(function() {
+             $('.menu .item').tab('activate tab', 'tab-200-mph-club');
+             $('.menu .item').tab('change tab', 'tab-200-mph-club');
+                timeoutId = setTimeout(function() {
+                     $('.menu .item').tab('activate tab', 'tab-' + randomOption);
+                     $('.menu .item').tab('change tab', 'tab-' + randomOption);
+                     scrollToBottom();
+                
+                }, duration);     
+            }, duration);
+        }, duration);
+    }
+    
+   
+
+    $( document ).ready(function() {
+        
+        // Set up tabs in Semantic UI
+        $('.tabular.menu .item').tab();
+        
+        // Listen for keydown event to stop scrolling
+        document.addEventListener('click', stopScrolling);
+        
+        // Start the repeating code
+        repeatFunction(0, duration);
+        
+    });
+    </script>
+        
+</head>
+<body>
+    
+    
+    <div class="ui container">
+    
+        <p align="center"><img src="/static/tour_logo.jpg" width="500"></p>
+        
+        <div class="ui top attached tabular menu">
+          <div class="item active" data-tab="tab-summary">Summary</div>
+          <div class="item" data-tab="tab-200-mph-club">200 MPH Club</div>
+          <div class="item" data-tab="tab-top_speed" onclick="stopScrolling();">Top Speed</div>
+          <div class="item" data-tab="tab-run_number" onclick="stopScrolling();">Run Number</div>
+          <div class="item" data-tab="tab-name" onclick="stopScrolling();">Driver</div>
+          <div class="item" data-tab="tab-sponsors">Sponsors</div>
+        </div>
+        
+        <div class="ui bottom attached active tab transition fade in segment very padded inverted" data-tab="tab-summary">
+        
+                
+            <h1 class="ui header">Top Speed</h1>
+                
+                <p>The current top speed on the course is <strong>{{ leader.top_speed }} MPH</strong>, set by <strong><a href="/onedriver?name={{ leader.name }}">{{ leader.name }}</a></strong> driving a <strong>{{ leader.car }}</strong> on their {{ leader.run }} run.</p>
+            
+            <h1 class="ui header">Last Five Drivers</h1>
+            
+                <ul>
+                {% for item in last %}
+                    
+                    <li><a href="/onedriver?name={{ item.name }}">{{ item.name }}</a> driving a {{ item.car }} went {{ item.top_speed }} MPH</li>
+                
+                {% endfor %}
+               
+                </ul>
+                </p>
+            
+            
+            
+            
+            
+             
+        </div>
+        <div class="ui bottom attached tab segment transition fade in very padded inverted" data-tab="tab-top_speed">
+            
+            
+            <div class="ui four column grid fluid">
+                
+                
+                <div class="ui row">
+                    <div class="ui column red">Driver</div>
+                    <div class="ui column red">Car</div>
+                    <div class="ui column red">Run #</div>
+                    <div class="ui column red"><strong>Top Speed</strong></div>
+                </div>
+                
+               
+                {% for item in top_speed %}
+                
+                    <div class="row">
+                        <div class="column"><a href="/onedriver?name={{ item.name }}">{{ item.name }}</a></div>
+                        <div class="column">{{ item.car }}</div>
+                        <div class="column">{{ item.heat }} {{ item.run_number }}</div>
+                        <div class="column"><strong>{{ item.top_speed }} MPH</strong></div>
+                    </div>
+                    
+                
+                {% endfor %}
+                
+            </div>
+            
+        </div>
+        <div class="ui bottom attached tab segment transition fade in very padded inverted" data-tab="tab-run_number">
+            
+            <div class="ui four column grid fluid">
+                
+                
+                <div class="ui row">
+                    <div class="ui column red">Driver</div>
+                    <div class="ui column red">Car</div>
+                    <div class="ui column red"><strong>Run #</strong></div>
+                    <div class="ui column red">Top Speed</div>
+                </div>
+                
+                {% for item in run_number %}
+                
+                    <div class="row">
+                        <div class="column"><a href="/onedriver?name={{ item.name }}">{{ item.name }}</a></div>
+                        <div class="column">{{ item.car }}</div>
+                        <div class="column"><strong>{{ item.run_number }}</strong></div>
+                        <div class="column">{{ item.top_speed }} MPH</div>
+                    </div>
+                    
+                
+                {% endfor %}
+            </div>
+            
+        </div>
+        <div class="ui bottom attached tab segment transition fade in very padded inverted" data-tab="tab-name">
+            
+            <div class="ui four column grid fluid">
+                
+                
+                <div class="ui row">
+                    <div class="ui column red"><strong>Driver</strong></div>
+                    <div class="ui column red">Car</div>
+                    <div class="ui column red">Run #</div>
+                    <div class="ui column red">Top Speed</div>
+                </div>
+                
+                {% for item in name %}
+                
+                    <div class="row">
+                        <div class="column"><a href="/onedriver?name={{ item.name }}">{{ item.name }}</a></div>
+                        <div class="column">{{ item.car }}</div>
+                        <div class="column">{{ item.run_number }}</div>
+                        <div class="column">{{ item.top_speed }} MPH</div>
+                    </div>
+                    
+                
+                {% endfor %}
+            </div>
+            
+        </div>
+        <div class="ui bottom attached tab segment transition fade in very padded inverted" data-tab="tab-200-mph-club">
+            
+            <h1 class="ui header">200 MPH Club</h1>
+            
+            <p>The 200 MPH club currently includes 
+                
+            {% for item in club %}
+                
+                <a href="/onedriver?name={{ item.name }}">{{ item.name }}</a>, 
+            
+            {% endfor %}
+            
+             and so far that is it.</p>
+             
+             <p align="center" id="refresh_off_message_2" style="display:none;">Automatic refresh is turned <u>OFF</u>: please manually reload this page when you are done examining the results</p>
+            
+            
+        </div>
+        <div class="ui bottom attached tab segment transition fade in very padded" data-tab="tab-sponsors">
+            
+            <p align="center"><img border="0" src="/static/sponsors/mclaren.jpg" width="1000"></p>
+            
+            <div class="ui three column grid middle aligned fluid">
+            
+                <div class="column"><img border="0" src="/static/sponsors/porsche.png" width="300"></div>
+                <div class="column"><img border="0" src="/static/sponsors/svac.jpeg" width="300"></div>
+                <div class="column"><img border="0" src="/static/sponsors/peterson.jpeg" width="300"></div>
+                            
+            </div>
+            
+            <div class="ui five column grid middle aligned fluid">
+            
+                <div class="column"><img border="0" src="/static/sponsors/simmons.jpeg" width="150"></div>
+                <div class="column"><img border="0" src="/static/sponsors/barrens.jpeg" width="150"></div>
+                <div class="column"><img border="0" src="/static/sponsors/robertson.jpeg" width="150"></div>
+                <div class="column"><img border="0" src="/static/sponsors/allata.jpeg" width="150"></div>
+                <div class="column"><img border="0" src="/static/sponsors/elite.jpeg" width="150"></div>
+                            
+            </div>
+            
+            <div class="ui four column grid middle aligned fluid">
+            
+                <div class="column"><img border="0" src="/static/sponsors/snake_river.jpeg" width="200"></div>
+                <div class="column"><img border="0" src="/static/sponsors/american_harvest.jpeg" width="200"></div>
+                <div class="column"><img border="0" src="/static/sponsors/motion_garage.png" width="200"></div>
+                <div class="column"><img border="0" src="/static/sponsors/singer.png" width="200"></div>
+                           
+            </div>
+            
+            <div class="ui three column grid middle aligned fluid">
+            
+                <div class="column"><img border="0" src="/static/sponsors/concannon.jpeg" width="250"></div>
+                <div class="column"><img border="0" src="/static/sponsors/hagerty.png" width="250"></div>
+                <div class="column"><img border="0" src="/static/sponsors/limelight.jpeg" width="250"></div>
+                            
+            </div>
+            
+            <div class="ui three column grid middle aligned fluid">
+            
+                <div class="column"><img border="0" src="/static/sponsors/hub.jpeg" width="250"></div>
+                <div class="column"><img border="0" src="/static/sponsors/sun_valley_ski.jpeg" width="250"></div>
+                <div class="column"><img border="0" src="/static/sponsors/coolcarpins.png" width="250"></div>
+                            
+            </div>            
+            
+        </div>      
+        
+        
+        
+    
+    </div>
+    
+    <br><br><br><br><br><br><br><br>
+    
+    
+   
+    
+
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<!-- Results generate at {{ timestamp }} -->
+<head>
+    <title>SVTdF Speedtracker Devices</title>
+    <style>
+        body {
+            background-color: #1F1F1F;
+            color: #CCCCCC;
+            font-family: sans-serif;
+            font-size: larger;
+        }
+        a:link { color: #B4DCFE; }
+        a:visited { color: #749DD5; }
+        th,td {
+            padding: 1.5px ;
+        }
+        tr {
+            background-color: #2f2f2f;
+        }
+        tr:nth-child(even) {
+            background-color: #373737;
+        }
+        .table_title {
+            color: #B4DCFE;
+        }
+        .column_name {
+            color: #749DD5;
+        }
+        .error_cell {
+            background-color: #BD7878;
+            color: black;
+        }
+        .button {
+            border: none;
+            background-color: #749DD5;
+            color: black;
+            padding: 0px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .text-input {
+            font-family: monospace;
+        }
+        .too-many-runs {
+            color: red;
+        }
+        .run-count-ok {
+            color: green;
+        }
+        .run-count-low {
+            color: yellow;
+        }
+        .column {
+            float: left;
+            padding: 5px;
+        }
+        .left {
+            overflow-x: visible;
+        }
+        .right {
+            overflow-x: visible;
+        }
+        .SxS:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+    <script>
+        function parseRgbColor(colorString) {
+            m = colorString.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+            if (m) {
+                return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+            }
+        }
+
+        function addColor(colorStr, r, g, b) {
+            color = parseRgbColor(colorStr);
+            color[0] = Math.min(color[0] + r, 255);
+            color[1] = Math.min(color[1] + g, 255);
+            color[2] = Math.min(color[2] + b, 255);
+            return "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")";
+        }
+
+        function runValidationChecks() {
+            //
+            // hook up server-side event to trigger a reload when the database is updated
+            //
+            var eventSource = new EventSource("/stream")
+            eventSource.onmessage = function(e) {
+                location.reload(true);
+            };        
+            const rows = document.getElementsByName('schedule_row');
+            //
+            // fill in "next_run" column
+            //
+            for (let i = 0; i < rows.length; i++) {
+                const thisHeat = parseInt(rows[i].children.namedItem('heat').innerText);
+                const thisRun = parseInt(rows[i].children.namedItem('run').innerText);
+                const thisDevice = parseInt(rows[i].children.namedItem('device_id').innerText);
+                nextRun = "";
+                for (let j = i+1; j < rows.length; j++) {
+                    const device = parseInt(rows[j].children.namedItem('device_id').innerText);
+                    if (device == thisDevice) {
+                        const heat = parseInt(rows[j].children.namedItem('heat').innerText);
+                        const run = parseInt(rows[j].children.namedItem('run').innerText);
+                        nextRun = "&nbsp;" + heat + "-" + run;
+                        break;
+                    }
+                }
+                rows[i].children.namedItem('next_run').innerHTML = nextRun;
+            }
+            //
+            // Insert space between heats
+            //
+            var curHeat = 0;
+            for (let i = 0; i < rows.length; i++) {
+                thisRowHeatElement = rows[i].children.namedItem('heat');
+                const thisHeat = parseInt(thisRowHeatElement.innerText);
+                thisRowRunElement = rows[i].children.namedItem('run');
+                const thisRun = parseInt(thisRowRunElement.innerText);
+
+                //
+                // highlight current heat
+                //
+                if (thisHeat == {{ current_heat }}) {
+                    const curBackColor = window.getComputedStyle(rows[i]).backgroundColor;
+                    rows[i].style.backgroundColor = addColor(curBackColor, 10, 30, 0);
+                }
+
+                if (curHeat != thisHeat) {
+                    var newRow = document.createElement("tr");
+                    newRow.innerHTML = "<td colspan=8>Heat " + thisHeat + " </td>";
+                    newRow.style.backgroundColor = "#000022"
+                    rows[i].before(newRow);
+                    var newHeader = document.createElement("tr");
+                    newHeader.innerHTML = 
+                    "<tr class='column_name'>" +
+                    "    <td>heat</td>" + 
+                    "    <td>run</td>" + 
+                    "    <td>driver_name</td>" + 
+                    "    <td>car_description</td>" + 
+                    "    <td>car_plate</td>" + 
+                    "    <td>mac_address</td>" + 
+                    "    <td>device_id</td>" + 
+                    "    <td>next_run</td>" + 
+                    "</tr>";
+                    newHeader.classList.add("column_name");
+                    newRow.after(newHeader);
+
+                    curHeat = thisHeat;
+                }
+            }
+        }
+    </script>
+    <link rel="shortcut icon" href="../static/logo.png">
+</head>
+<body onload="runValidationChecks()">
+<div>
+    Device Status as of {{ timestamp }}
+</div>
+<div>
+    <div class="SxS">
+    <div class="column left">
+    <table id="schedule_view_left" style="font-family:monospace">
+        {% for item in schedule %}
+        <tr name="schedule_row" id="schedule_row_{{item.heat}}-{{item.run}}">
+            <td name="heat">{{ item.heat }}</td>
+            <td name="run">{{ item.run }}</td>
+            <td name="driver_name">{{ item.driver_name }}</td>
+            <td name="car_description">{{ item.car_description }}</td>
+            <td name="car_plate">&nbsp;{{ item.car_plate }}&nbsp;</td>
+            <td name="mac_address">&nbsp;{{ item.mac_address }}&nbsp;</td>
+            <td name="device_id">&nbsp;{{ item.device_id }}</td>
+            <td name="next_run"></td>
+        </tr>
+        {% endfor %}
+    </table>
+    </div>
+</div>
+</div>
+</body>
+</html>

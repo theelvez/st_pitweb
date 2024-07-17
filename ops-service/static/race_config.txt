@@ -1,0 +1,12 @@
+config_version=1003
+bamf_speed=0.00
+finishLine_left_lat=43.78892
+finishLine_left_lng=-114.48283
+finishLine_right_lat=43.78884
+finishLine_right_lng=-114.48278
+upload_server_ssid=st_pit
+upload_server_password=sp33dtrack3r
+upload_server_url=http://192.168.0.15:80/upload_run_data
+battery_report_voltage=0
+upload_server_block_on_upload=1
+pressure_baseline=1010.0
